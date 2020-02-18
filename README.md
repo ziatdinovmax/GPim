@@ -25,7 +25,9 @@ To perform GP-based reconstruction of sparse 2D image or sparse hyperspectral 3D
 ```
 python3 reconstruct.py <path/to/file.npy>
 ```
-The missing values in the sparse data must be [NaNs](https://docs.scipy.org/doc/numpy/reference/constants.html?highlight=numpy%20nan#numpy.nan). If the data provided doesn't have missing values, it will be interpreted as a ground truth and a sparse copy of this dataset will be created. You can control the sparsity by passing ```--PROB``` argument (use ```python3 reconstruct.py -h``` to see other optional arguments). The ```reconstruct.py``` will return a zipped archive (.npz format) of numpy files corresponding to the ground truth (if applicable), input data, predictive mean and variance, and learned kernel hyperparameters. You can use ```python3 plot.py <path/to/file.npz>``` to view the results. **TODO:** Add SKI kernel option.
+The missing values in the sparse data must be [NaNs](https://docs.scipy.org/doc/numpy/reference/constants.html?highlight=numpy%20nan#numpy.nan). If the data provided doesn't have missing values, it will be interpreted as a ground truth and a sparse copy of this dataset will be created. You can control the sparsity by passing ```--PROB``` argument (use ```python3 reconstruct.py -h``` to see other optional arguments). The ```reconstruct.py``` will return a zipped archive (.npz format) of numpy files corresponding to the ground truth (if applicable), input data, predictive mean and variance, and learned kernel hyperparameters. You can use ```python3 plot.py <path/to/file.npz>``` to view the results.
+
+**TODO:** Add SKI kernel option.
 
 To perform GP-guided sample exploration with hyperspectral (3D) measurements based on the reduction of maximal uncertainty, run: 
 ```
