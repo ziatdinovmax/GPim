@@ -33,7 +33,7 @@ python3 explore.py <path/to/file.npy>
 ```
 Notice that the exploration part currently runs only "synthetic experiments" where you need to provide a full dataset (no missing values) as a ground truth.
 
-## GPim: running notebooks in the cloud
+## Running GPim notebooks in the cloud
 
 1. Executable Googe Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/notebooks/GP_BEPFM.ipynb) with examples of applying GP to both hyperspectral (3D) data reconstruction and sample exploration in band excitation scanning probe microscopy (BEPFM).
 2. Executable Google Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/notebooks/GP_TD_cKPFM.ipynb) with example of applying GP to 4D spectroscopic dataset for smoothing and resolution enhancement in contact Kelvin Probe Force Microscopy (cKPFM)
