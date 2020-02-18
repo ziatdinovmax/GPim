@@ -170,7 +170,7 @@ class reconstructor:
         """
         print("Calculating predictive mean and variance...", end=" ")
         with torch.no_grad():
-            mean, cov = self.sgpr(Xtest, full_cov=False, noiseless=False)
+            mean, cov = self.sgpr(self.Xtest, full_cov=False, noiseless=False)
         print("Done")
         return mean.cpu().numpy(), cov.sqrt().cpu().numpy()
 
