@@ -1,4 +1,4 @@
-# GP
+# GPim
 GP is a python package that provides a systematic and easy way to apply Gaussian processes (GP) 
 to images and hyperspectral data in [Pyro](https://pyro.ai/) and [Gpytorch](https://gpytorch.ai/) frameworks
 (without a need to learn those frameworks).
@@ -12,9 +12,9 @@ GP for 4D hyperspectral data: https://arxiv.org/abs/2002.03591
 To use it, first run:
 
 ```
-git clone https://github.com/ziatdinovmax/GP.git
-cd GP
-python3 -m pip install setup.py
+git clone https://github.com/ziatdinovmax/GPim.git
+cd GPim
+python3 setup.py install
 ```
 
 To perform GP-based reconstruction of sparse 2D image or sparse hyperspectral 3D data (datacube where measurements (spectroscopic curves) are missing for various xy positions), run:
