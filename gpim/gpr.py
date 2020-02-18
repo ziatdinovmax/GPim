@@ -47,10 +47,6 @@ class reconstructor:
             learning rate
         iterations: int
             number of SVI training iteratons
-        num_batches: int
-            number of batches for splitting the Xtest array
-            (for large datasets, you may not have enough GPU memory
-            to process the entire dataset at once)
         use_gpu: bool
             Uses GPU hardware accelerator when set to 'True'
         verbose: bool
@@ -75,8 +71,8 @@ class reconstructor:
                  kernel, lengthscale=None,
                  indpoints=1000, input_dim=3,
                  learning_rate=5e-2, iterations=1000,
-                 num_batches=10, use_gpu=False, 
-                 verbose=False, **kwargs):
+                 use_gpu=False, verbose=False,
+                 **kwargs):
         if use_gpu and torch.cuda.is_available():
             torch.cuda.empty_cache()
             torch.set_default_tensor_type(torch.cuda.DoubleTensor)
@@ -105,7 +101,6 @@ class reconstructor:
         print("# of inducing points for GP regression: {}".format(len(Xu)))
         if use_gpu:
             self.sgpr.cuda()
-        self.num_batches = num_batches
         self.learning_rate = learning_rate
         self.iterations = iterations
         self.hyperparams = {}
@@ -166,34 +161,18 @@ class reconstructor:
                 np.around(self.sgpr.noise.item(), 7)))
         return
 
-    def predict(self, **kwargs):
+    def predict(self):
         """
         Use trained GPRegression model to make predictions
-        **Kwargs:
-            num_batches: int
-                number of batches for splitting the Xtest array
-                (for large datasets, you may not have enough GPU memory
-                to process the entire dataset at once)
+        
         Returns:
             predictive mean and variance
         """
-        if kwargs.get("num_batches") is not None:
-            self.num_batches = kwargs.get("num_batches")
         print("Calculating predictive mean and variance...", end=" ")
-        # Prepare for inference
-        batch_range = len(self.Xtest) // self.num_batches
-        mean = np.zeros((self.Xtest.shape[0]))
-        sd = np.zeros((self.Xtest.shape[0]))
-        # Run inference batch-by-batch
-        for i in range(self.num_batches):
-            Xtest_i = self.Xtest[i*batch_range:(i+1)*batch_range]
-            with torch.no_grad():
-                mean_i, cov = self.sgpr(Xtest_i, full_cov=True, noiseless=False)
-            sd_i = cov.diag().sqrt()
-            mean[i*batch_range:(i+1)*batch_range] = mean_i.cpu().numpy()
-            sd[i*batch_range:(i+1)*batch_range] = sd_i.cpu().numpy()
+        with torch.no_grad():
+            mean, cov = self.sgpr(Xtest, full_cov=False, noiseless=False)
         print("Done")
-        return mean, sd
+        return mean.cpu().numpy(), cov.sqrt().cpu().numpy()
 
     def run(self, **kwargs):
         """
@@ -204,8 +183,6 @@ class reconstructor:
                 learning rate for GPR model training
             steps: int
                 number of SVI training iteratons
-            num_batches: int
-                number of batches for splitting the Xtest array
 
         Returns:
             predictive mean and SD as flattened ndarrays
@@ -216,10 +193,8 @@ class reconstructor:
             self.learning_rate = kwargs.get("learning_rate")
         if kwargs.get("iterations") is not None:
             self.iterations = kwargs.get("iterations")
-        if kwargs.get("num_batches") is not None:
-            self.num_batches = kwargs.get("num_batches")
         self.train(learning_rate=self.learning_rate, iterations=self.iterations)
-        mean, sd = self.predict(num_batches=self.num_batches)
+        mean, sd = self.predict()
         if next(self.sgpr.parameters()).is_cuda:
             self.sgpr.cpu()
             torch.set_default_tensor_type(torch.DoubleTensor)
@@ -242,8 +217,6 @@ class reconstructor:
                 learning rate for GPR model training
             steps: int
                 number of SVI training iteratons
-            num_batches: int
-                number of batches for splitting the Xtest array
 
         Returns:
             lists of indices and values for points with maximum uncertainty, 
@@ -254,26 +227,14 @@ class reconstructor:
             self.learning_rate = kwargs.get("learning_rate")
         if kwargs.get("iterations") is not None:
             self.iterations = kwargs.get("iterations")
-        if kwargs.get("num_batches") is not None:
-            self.num_batches = kwargs.get("num_batches")
         # train a model
         self.train(learning_rate=self.learning_rate, iterations=self.iterations)
         # make prediction
-        mean, sd = self.predict(num_batches=self.num_batches)
+        mean, sd = self.predict()
         # find point with maximum uncertainty
         sd_ = sd.reshape(self.fulldims[0], self.fulldims[1], self.fulldims[2])
         amax, uncert_list = gprutils.max_uncertainty(sd_, dist_edge)
         return amax, uncert_list, mean, sd
-
-    def train_sgpr_model(self, learning_rate=5e-2, steps=1000):
-        print("Use reconstructor.run instead of reconstructor.train_sgpr_model",
-        "and reconstructor.sgpr_predict to obtain mean, sd and hyperparameters")
-        pass
-
-    def sgpr_predict(self, model, num_batches=10):
-        print("Use reconstructor.run instead of reconstructor.train_sgpr_model",
-        "and reconstructor.sgpr_predict to obtain mean, sd and hyperparameters")
-        pass
 
 
 def get_kernel(kernel_type, input_dim, lengthscale, use_gpu=False, **kwargs):
@@ -353,10 +314,3 @@ def get_kernel(kernel_type, input_dim, lengthscale, use_gpu=False, **kwargs):
         )
 
     return kernel
-
-
-class explorer:
-    def __init__(self, X, y, Xtest, kernel, lengthscale,
-                 indpoints=1000, ldim=3, use_gpu=False, verbose=False):
-        print("Use gpr.reconstructor instead of gpr.explorer")
-        pass
