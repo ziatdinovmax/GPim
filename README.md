@@ -38,6 +38,8 @@ Notice that the exploration part currently runs only "synthetic experiments" whe
 1. Executable Googe Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/notebooks/GP_BEPFM.ipynb) with examples of applying GP to both hyperspectral (3D) data reconstruction and sample exploration in band excitation scanning probe microscopy (BEPFM).
 2. Executable Google Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/notebooks/GP_TD_cKPFM.ipynb) with example of applying GP to 4D spectroscopic dataset for smoothing and resolution enhancement in contact Kelvin Probe Force Microscopy (cKPFM)
 
+## Requirements
+
 It is strongly recommended to run the codes with a GPU hardware accelerator. If you don't have a GPU on your local machine, you may rent a cloud GPU from [Google Cloud AI Platform](https://cloud.google.com/deep-learning-vm/). Running the [example notebook](https://colab.research.google.com/github/ziatdinovmax/GP/blob/master/notebooks/GP_BEPFM.ipynb) one time from top to bottom will cost about 1 USD with a standard deep learning VM instance (one P100 GPU and 15 GB of RAM).
 
 
