@@ -21,7 +21,6 @@ parser.add_argument("--INDUCING_POINTS", nargs="?", default=1500, type=int)
 parser.add_argument("--NORMALIZE", nargs="?", default=1, type=int,
                     help="Normalizes to [0, 1]. 1 is True, 0 is False")
 parser.add_argument("--STEPS", nargs="?", default=1000, type=int)
-parser.add_argument("--NUM_BATCHES", nargs="?", default=100, type=int)
 parser.add_argument("--PROB", nargs="?", default=0.0, type=float,
                     help="Value between 0 and 1." +
                     "Controls number of data points to be removed.")
@@ -60,8 +59,8 @@ if not os.path.exists(args.SAVEDIR):
 # Reconstruct the corrupt data. Initalize our "reconstructor" first.
 reconstr = gpr.reconstructor(
     X, R, X_true, args.KERNEL, LENGTH_CONSTR, args.INDUCING_POINTS,
-    np.ndim(R_true), args.LEARNING_RATE, args.STEPS, args.NUM_BATCHES,
-    args.USE_GPU, verbose=True)
+    np.ndim(R_true), args.LEARNING_RATE, args.STEPS, args.USE_GPU,
+    verbose=True)
 # Model training and prediction
 mean, sd, hyperparams = reconstr.run()
 # Save results
