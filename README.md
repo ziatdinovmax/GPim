@@ -12,7 +12,7 @@ GP for 4D hyperspectral data: https://arxiv.org/abs/2002.03591
 To use it, first run:
 
 ```
-!pip install git+https://github.com/ziatdinovmax/GPim.git
+pip install git+https://github.com/ziatdinovmax/GPim.git
 ```
 
 To perform GP-based reconstruction of sparse 2D image or sparse hyperspectral 3D data (datacube where measurements (spectroscopic curves) are missing for various xy positions), run:
