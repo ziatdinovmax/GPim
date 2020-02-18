@@ -199,6 +199,34 @@ def get_grid_indices(R, dense_x=1.):
     return X_grid
 
 
+def get_sparse_grid(R_true):
+    """
+    Returns sparse grid for sparse image data
+    
+    Args:
+        R_true: 2D or 3D ndarray
+            Sparse grid measurements (missing values are NaNs) 
+
+    Returns:
+        Sparse grid indices
+    """
+    assert np.isnan(R_true).any(),\
+    "Missing values in sparse data must be represented as NaNs"
+    X_true = get_grid_indices(R_true)
+    if np.ndim(R) == 2:    
+        e1, e2 = R_true.shape
+        X = X_true.copy().reshape(2, e1*e2)
+        X[:, np.where(np.isnan((R_true.flatten())))] = np.nan
+        X = X.reshape(2, e1, e2)
+    elif np.ndim(R_true) == 3:
+        e1, e2, e3 = R_true.shape
+        X = X_true.copy().reshape(3, e1*e2, e3)
+        indices = np.where(np.isnan((R_true.reshape(e1*e2, e3))))[0]
+        X[:, indices] = np.nan
+        X = X.reshape(3, e1, e2, e3)    
+    return X
+
+
 def to_constrained_interval(state_dict, lscale, amp):
     """
     Transforms kernel's unconstrained lenghscale and variance
