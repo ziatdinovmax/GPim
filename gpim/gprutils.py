@@ -405,25 +405,29 @@ def plot_kernel_hyperparams(hyperparams):
             dictionary with kernel hyperparameters
             (see gpr.explorer.train_sgpr_model)
     """
-    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(16, 4))
+    if 'variance' in hyperparams.keys():
+        fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(16, 4))
+    else:
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))
     l = ax1.plot(hyperparams['lengthscale'], linewidth=3)
     ax1.set_title('lengthscale')
     ax1.set_xlabel('SVI iteration')
     ax1.set_ylabel('lengthscale (px)')
     ax1.legend(l, ('dim 1', 'dim 2', 'dim 3'))
-    ax2.plot(hyperparams['variance'], linewidth=3)
+    ax2.plot(hyperparams['noise'], linewidth=3)
     ax2.set_yscale('log')
-    ax2.set_title('variance')
+    ax2.set_title('noise')
     ax2.set_xlabel('SVI iteration')
-    ax2.set_ylabel('variance (px)')
-    ax3.plot(hyperparams['noise'], linewidth=3)
-    ax3.set_yscale('log')
-    ax3.set_title('noise')
-    ax3.set_xlabel('SVI iteration')
-    ax3.set_ylabel('noise (px)')
+    ax2.set_ylabel('noise (px)')
     plt.subplots_adjust(wspace=.5)
+    if 'variance' in hyperparams.keys():
+        ax3.plot(hyperparams['variance'], linewidth=3)
+        ax3.set_yscale('log')
+        ax3.set_title('variance')
+        ax3.set_xlabel('SVI iteration')
+        ax3.set_ylabel('variance (px)')
     plt.show()
-
+    
 
 def plot_raw_data(raw_data, slice_number, pos,
                   spec_window=2, norm=False, **kwargs):
