@@ -58,13 +58,23 @@ class skreconstructor:
         verbose: bool
             Print statistics after each training iteration
     """
-    def __init__(self, X, y, Xtest,
-                 kernel='Matern52', input_dim=3,
-                 lengthscale=None, lengthscale_init=None,
-                 iterations=50, learning_rate=.1, grid_points_ratio=1.,
-                 maxroot=100, num_batches=10, calculate_sd=0,
-                 use_gpu=1, verbose=0):
-
+    def __init__(self, 
+                 X, 
+                 y, 
+                 Xtest,
+                 kernel='Matern52', 
+                 lengthscale=None, 
+                 lengthscale_init=None,
+                 iterations=50, 
+                 learning_rate=.1, 
+                 grid_points_ratio=1.,
+                 maxroot=100, 
+                 num_batches=10, 
+                 calculate_sd=0,
+                 use_gpu=1, 
+                 verbose=0):
+        
+        input_dim = np.ndim(y)
         X, y = gprutils.prepare_training_data(X, y)
         Xtest = gprutils.prepare_test_data(Xtest)
         self.X, self.y, self.Xtest = X, y, Xtest
