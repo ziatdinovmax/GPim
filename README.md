@@ -24,7 +24,7 @@ pip install git+https://github.com/ziatdinovmax/GPim.git
 
 ### General usage
 
-Below is a simple example of applying GPim to reconstructing a sparse 2D image. It can be similarly applied to 3D and 4D hyperspectral data. The missing data points in sparse data must be represented as NaNs. In the absense of missing observation GPim can be used for image and spectroscopic data cleaning/smoothing in all the dimensions simultaneously, as well as for the resolution enhancement (more details in the notebooks referenced below).
+Below is a simple example of applying GPim to reconstructing a sparse 2D image. It can be similarly applied to 3D and 4D hyperspectral data. The missing data points in sparse data must be represented as NaNs. In the absense of missing observation GPim can be used for image and spectroscopic data cleaning/smoothing in all the dimensions simultaneously, as well as for the resolution enhancement. Finally, when performing measurements, one can use the information about uncertainty in GP reconstruction to select the next measurement point (more details in the notebooks referenced below).
 
 ```python
 from gpim import skgpr, gpr, gprutils
