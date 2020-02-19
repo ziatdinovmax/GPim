@@ -49,10 +49,11 @@ reconstructor = gpr.reconstructor(
     iterations=250, use_gpu=True, verbose=False)
 mean, sd, hyperparams = reconstructor.run()
 
-# vizualize evolution of kernel hyperparameters
+# Plot reconstruction results
+gprutils.plot_reconstructed_data2d(R, mean, cmap='jet')
+# Plot evolution of kernel hyperparameters during training
 gprutils.plot_kernel_hyperparams(hyperparams)
-# plot original and GP-reconstructed data
-gprutils.plot_reconstructed_data2d(R, mean)
+gprutils.plot_inducing_points(hyperparams)
 ```
 
 ### Running GPim notebooks in the cloud
