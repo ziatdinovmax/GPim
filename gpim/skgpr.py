@@ -9,6 +9,7 @@ WORK IN PROGRESS. More details TBA
 Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
 '''
 
+import time
 import numpy as np
 from gpim import gprutils
 import torch
@@ -95,7 +96,7 @@ class skreconstructor:
                                 input_dim, grid_points_ratio)
         if use_gpu:
             self.model.cuda()
-        self.steps = iterations
+        self.iterations = iterations
         self.num_batches = num_batches
         self.calculate_sd = calculate_sd
         self.lr = learning_rate
@@ -111,29 +112,39 @@ class skreconstructor:
         """
         Trains GP regression model with structured kernel interpolation
         """
-        print('Model training...')
         self.model.train()
         self.likelihood.train()
         optimizer = torch.optim.Adam(
             [{'params': self.model.parameters()}], lr=self.lr)
         mll = gpytorch.mlls.ExactMarginalLogLikelihood(
             self.likelihood, self.model)
-        for i in range(self.steps):
+        print('Model training...')
+        start_time = time.time()
+        for i in range(self.iterations):
             optimizer.zero_grad()
             output = self.model(self.X)
             loss = -mll(output, self.y)
             loss.backward()
+            optimizer.step()
             self.lscales.append(
                 self.model.covar_module.base_kernel.base_kernel.lengthscale.tolist()[0]
             )
             self.noise_all.append(
                 self.model.likelihood.noise_covar.noise.item())
-            if self.verbose:
+            if self.verbose and (i % 10 == 0 or i == self.iterations - 1):
                 print('iter: {} ...'.format(i),
                       'loss: {} ...'.format(np.around(loss.item(), 4)),
                       'length: {} ...'.format(np.around(self.lscales[-1], 4)),
                       'noise: {} ...'.format(np.around(self.noise_all[-1], 7)))
-            optimizer.step()
+            if i == 10:
+                print('average time per iteration: {} s'.format(
+                    np.round(time.time() - start_time, 2) / 10))
+        print('training completed in {} s'.format(
+            np.round(time.time() - start_time, 2)))
+        print('Final parameter values:\n',
+              'lengthscale: {}, noise: {}'.format(
+                np.around(self.lscales[-1], 4),
+                np.around(self.noise_all[-1], 7)))
         return
 
     def predict(self, **kwargs):
