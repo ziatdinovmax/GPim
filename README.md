@@ -45,8 +45,8 @@ lengthscale = [[1., 1.], [4., 4.]]
 # Run GP reconstruction to obtain mean prediction and uncertainty for each predictied point
 reconstructor = gpr.reconstructor(
     X, R, X_true, kernel, lengthscale=lengthscale,
-    input_dim=2, indpoints=200, learning_rate=0.1,
-    iterations=250, use_gpu=True, verbose=False)
+    indpoints=200, learning_rate=0.1, iterations=250, 
+    use_gpu=True, verbose=False)
 mean, sd, hyperparams = reconstructor.run()
 
 # Plot reconstruction results
