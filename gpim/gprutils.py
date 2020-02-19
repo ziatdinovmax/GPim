@@ -194,8 +194,12 @@ def get_grid_indices(R, dense_x=1.):
         e1, e2, e3 = R.shape
         c1, c2, c3 = np.mgrid[:e1:dense_x, :e2:dense_x, :e3:dense_x]
         X_grid = np.array([c1, c2, c3])
+    elif np.ndim(R) == 4:
+        e1, e2, e3, e4 = R.shape
+        c1, c2, c3, c4 = np.mgrid[:e1:dense_x, :e2:dense_x, :e3:dense_x, :e4:dense_x]
+        X_grid= np.array([c1, c2, c3, c4])
     else:
-        raise NotImplementedError("Currently works only for 2D and 3D numpy arrays")
+        raise NotImplementedError("Currently works only for 2D-4D sets")
     return X_grid
 
 
@@ -224,6 +228,8 @@ def get_sparse_grid(R_true):
         indices = np.where(np.isnan((R_true.reshape(e1*e2, e3))))[0]
         X[:, indices] = np.nan
         X = X.reshape(3, e1, e2, e3)    
+    else:
+        raise NotImplementedError("Currently supports only 2D and 3D sets")
     return X
 
 
@@ -280,6 +286,8 @@ def corrupt_data_xy(X_true, R_true, prob=0.5, replace_w_zeros=False):
         X, R = corrupt_image2d(X_true, R_true, prob, replace_w_zeros)
     elif np.ndim(R_true) == 3:
         X, R = corrupt_image3d(X_true, R_true, prob, replace_w_zeros)
+    else:
+        raise NotImplementedError("Currently supports only 2D and 3D sets")
     return X, R
 
 
