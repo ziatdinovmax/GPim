@@ -67,12 +67,20 @@ class reconstructor:
             Combines a single model training and prediction
             to find point with max uncertainty in the data
     """
-    def __init__(self, X, y, Xtest,
-                 kernel, lengthscale=None,
-                 indpoints=1000, input_dim=3,
-                 learning_rate=5e-2, iterations=1000,
-                 use_gpu=False, verbose=False,
+    def __init__(self, 
+                 X, 
+                 y, 
+                 Xtest,
+                 kernel, 
+                 lengthscale=None,
+                 indpoints=1000, 
+                 learning_rate=5e-2, 
+                 iterations=1000,
+                 use_gpu=False, 
+                 verbose=False,
                  **kwargs):
+        
+        input_dim = np.ndim(y)
         if use_gpu and torch.cuda.is_available():
             torch.cuda.empty_cache()
             torch.set_default_tensor_type(torch.cuda.DoubleTensor)
