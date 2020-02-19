@@ -485,9 +485,6 @@ def plot_reconstructed_data2d(R, mean, save_fig=False, **kwargs):
         mean: 1D numpy array
             predictive mean
             (cab be flattened; actual dimensions are the same as for R and R_true)
-        sd: 1D numpy array
-            standard deviation
-            (can be flattened; actual dimensions are the same as for R and R_true)
 
     **Kwargs:
         savedir: str
