@@ -32,22 +32,19 @@ import numpy as np
 
 # # Load dataset
 R = np.load('sparse_exp_data.npy') 
-# get full grid indices
-X_true = gprutils.get_grid_indices(R)
-# get sparse grid indices
-X = gprutils.get_sparse_grid(R)
 
-# Specify kernel
-kernel = 'RBF'
-# Kernel lengthscale constraints
+# Get full grid indices
+X_true = gprutils.get_grid_indices(R)
+# Get sparse grid indices
+X = gprutils.get_sparse_grid(R)
+# Kernel lengthscale constraints (optional)
 lengthscale = [[1., 1.], [4., 4.]] 
 
 # Run GP reconstruction to obtain mean prediction and uncertainty for each predictied point
-reconstructor = gpr.reconstructor(
-    X, R, X_true, kernel, lengthscale=lengthscale,
+mean, sd, hyperparams = gpr.reconstructor(
+    X, R, X_true, kernel='RBF', lengthscale=lengthscale,
     indpoints=200, learning_rate=0.1, iterations=250, 
-    use_gpu=True, verbose=False)
-mean, sd, hyperparams = reconstructor.run()
+    use_gpu=True, verbose=False).run()
 
 # Plot reconstruction results
 gprutils.plot_reconstructed_data2d(R, mean, cmap='jet')
