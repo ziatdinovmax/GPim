@@ -31,21 +31,12 @@ parser.add_argument("--SAVEDIR", nargs="?", default="Output", type=str,
 
 args = parser.parse_args()
 
-# Load "ground truth" data (N x M x L spectroscopic grid)
+# Load data (e.g. N x M image or N x M x L spectroscopic grid)
 R_true = np.load(args.FILEPATH)
-if args.NORMALIZE and np.isnan(R_true).any() == False:
+if args.NORMALIZE and np.isnan(R_true).any() is False:
     R_true = (R_true - np.amin(R_true))/np.ptp(R_true)
 # Get "ground truth" grid indices
-if np.ndim(R_true) == 2:
-    e1, e2 = R_true.shape
-    c1, c2 = np.mgrid[:e1:1., :e2:1.]
-    X_true = np.array([c1, c2])
-elif np.ndim(R_true) == 3:
-    e1, e2, e3 = R_true.shape
-    c1, c2, c3 = np.mgrid[:e1:1., :e2:1., :e3:1.]
-    X_true = np.array([c1, c2, c3])
-else:
-    raise NotImplementedError("The input ndarray must be 2D or 3D")
+X_true = gprutils.get_grid_indices(R_true)
 # Construct lengthscale constraints for all dimensions
 LENGTH_CONSTR = [
                  [float(args.LENGTH_CONSTR_MIN) for i in range(np.ndim(R_true))],
@@ -59,8 +50,7 @@ if not os.path.exists(args.SAVEDIR):
 # Reconstruct the corrupt data. Initalize our "reconstructor" first.
 reconstr = gpr.reconstructor(
     X, R, X_true, args.KERNEL, LENGTH_CONSTR, args.INDUCING_POINTS,
-    np.ndim(R_true), args.LEARNING_RATE, args.STEPS, args.USE_GPU,
-    verbose=True)
+    args.LEARNING_RATE, args.STEPS, args.USE_GPU, verbose=True)
 # Model training and prediction
 mean, sd, hyperparams = reconstr.run()
 # Save results

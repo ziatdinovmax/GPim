@@ -48,9 +48,7 @@ R_true = np.load(args.FILEPATH)
 if args.NORMALIZE and np.isnan(R_true).any() is False:
     R_true = (R_true - np.amin(R_true))/np.ptp(R_true)
 # Get "ground truth" grid indices
-e1, e2, e3 = R_true.shape
-c1, c2, c3 = np.mgrid[:e1:1., :e2:1., :e3:1.]
-X_true = np.array([c1, c2, c3])
+X_true = gprutils.get_grid_indices(R_true)
 # Make initial set of measurements for exploration analysis.
 # Let's start with "opening" several points along each edge
 R = R_true*0
@@ -76,7 +74,7 @@ for i in range(args.ESTEPS):
     # Initialize explorer
     bexplorer = gpr.reconstructor(
         X, R, X_true, args.KERNEL, LENGTH_CONSTR,
-        indpoints, 3, args.LEARNING_RATE, args.STEPS,
+        indpoints, args.LEARNING_RATE, args.STEPS,
         use_gpu=args.USE_GPU)
     # get indices/value of a max uncertainty point
     uncert_idx, uncert_val, mean, sd = bexplorer.step(dist_edge)
