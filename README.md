@@ -20,7 +20,48 @@ To use it, first run:
 pip install git+https://github.com/ziatdinovmax/GPim.git
 ```
 
-## Command line usage
+## How to use
+
+### General usage
+
+Below is a simple example of applying GPim to reconstructing a sparse 2D image. It can be similarly applied to 3D and 4D hyperspectral data. The missing data points in sparse data must be represented as NaNs. In the absense of missing observation GPim can be used for image and spectroscopic data cleaning/smoothing in all the dimensions simultaneously, as well as for the resolution enhancement (more details in the notebooks referenced below).
+
+```python
+from gpim import skgpr, gpr, gprutils
+import numpy as np
+
+# # Load dataset
+R = np.load('sparse_exp_data.npy') 
+# get full grid indices
+X_true = gprutils.get_grid_indices(R)
+# get sparse grid indices
+X = gprutils.get_sparse_grid(R)
+
+# Specify kernel
+kernel = 'RBF'
+# Kernel lengthscale constraints
+lengthscale = [[1., 1.], [4., 4.]] 
+
+# Run GP reconstruction to obtain mean prediction and uncertainty for each predictied point
+reconstructor = gpr.reconstructor(
+    X, R, X_true, kernel, lengthscale=lengthscale,
+    input_dim=2, indpoints=200, learning_rate=0.1,
+    iterations=250, use_gpu=True, verbose=False)
+mean, sd, hyperparams = reconstructor.run()
+
+# vizualize evolution of kernel hyperparameters
+gprutils.plot_kernel_hyperparams(hyperparams)
+# plot original and GP-reconstructed data
+gprutils.plot_reconstructed_data2d(R, mean)
+```
+
+### Running GPim notebooks in the cloud
+
+1. Executable Googe Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/notebooks/GP_BEPFM.ipynb) with the example of applying GP to both hyperspectral (3D) data reconstruction and sample exploration in band excitation scanning probe microscopy (BEPFM).
+2. Executable Google Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/notebooks/GP_TD_cKPFM.ipynb) with the example of applying GP to 4D spectroscopic dataset for smoothing and resolution enhancement in contact Kelvin Probe Force Microscopy (cKPFM)
+
+
+### Command line usage
 To perform GP-based reconstruction of sparse 2D image or sparse hyperspectral 3D data (datacube where measurements (spectroscopic curves) are missing for various xy positions), run:
 ```
 python3 reconstruct.py <path/to/file.npy>
@@ -35,10 +76,6 @@ python3 explore.py <path/to/file.npy>
 ```
 Notice that the exploration part currently runs only "synthetic experiments" where you need to provide a full dataset (no missing values) as a ground truth.
 
-## Running GPim notebooks in the cloud
-
-1. Executable Googe Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/notebooks/GP_BEPFM.ipynb) with the example of applying GP to both hyperspectral (3D) data reconstruction and sample exploration in band excitation scanning probe microscopy (BEPFM).
-2. Executable Google Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/notebooks/GP_TD_cKPFM.ipynb) with the example of applying GP to 4D spectroscopic dataset for smoothing and resolution enhancement in contact Kelvin Probe Force Microscopy (cKPFM)
 
 ## Requirements
 
