@@ -444,6 +444,8 @@ def plot_raw_data(raw_data, slice_number, pos,
             window to integrate over in frequency dimension (for 2D "slices")
 
     **Kwargs:
+        cmap: str
+            cmap for 2D image ("slice") plot
         z_vec: 1D ndarray
             spectroscopic measurements values (e.g. frequency, bias)
         z_vec_label: str
@@ -451,6 +453,7 @@ def plot_raw_data(raw_data, slice_number, pos,
         z_vec_units: str
             spectroscopic measurements units (e.g. Hz, V)
     """
+    cmap = kwargs.get('cmap', 'magma')
     z_vec = kwargs.get('z_vec')
     z_vec_label = kwargs.get('z_vec_label')
     z_vec_units = kwargs.get('z_vec_units')
@@ -461,7 +464,7 @@ def plot_raw_data(raw_data, slice_number, pos,
     s = slice_number
     spw = spec_window
     _, ax = plt.subplots(1, 2, figsize=(10, 4.5))
-    ax[0].imshow(np.sum(raw_data[:, :, s-spw:s+spw], axis=-1), cmap='magma')
+    ax[0].imshow(np.sum(raw_data[:, :, s-spw:s+spw], axis=-1), cmap=cmap)
     for p, col in zip(pos, my_colors):
         ax[0].scatter(p[1], p[0], c=col)
         ax[1].plot(z_vec, raw_data[p[0], p[1], :], c=col)
@@ -487,6 +490,8 @@ def plot_reconstructed_data2d(R, mean, save_fig=False, **kwargs):
             (cab be flattened; actual dimensions are the same as for R and R_true)
 
     **Kwargs:
+        cmap: str
+            cmap for 2D image plot
         savedir: str
             directory to save output figure
         filepath: str
@@ -496,17 +501,16 @@ def plot_reconstructed_data2d(R, mean, save_fig=False, **kwargs):
     """
 
     if save_fig:
-        mdir = kwargs.get('savedir')
-        if mdir is None:
-            mdir = 'Output'
+        mdir = kwargs.get('savedir', 'Output')
         if not os.path.exists(mdir):
             os.makedirs(mdir)
         fpath = kwargs.get('filepath')
     sparsity = kwargs.get('sparsity')
+    cmap = kwargs.get('cmap', 'nipy_spectral')
     e1, e2 = R.shape
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
-    ax1.imshow(R, cmap='nipy_spectral')
-    ax2.imshow(mean.reshape(e1, e2), cmap='nipy_spectral')
+    ax1.imshow(R, cmap=cmap)
+    ax2.imshow(mean.reshape(e1, e2), cmap=cmap)
     ax1.set_title('Input/corrupted data')
     if sparsity:
         ax2.set_title(
@@ -545,6 +549,8 @@ def plot_reconstructed_data3d(R, mean, sd, slice_number, pos,
             window to integrate over in frequency dimension (for 2D "slices")
 
     **Kwargs:
+        cmap: str
+            cmap for 2D image ("slices") plots
         savedir: str
             directory to save output figure
         sparsity: float (between 0 and 1)
@@ -566,6 +572,7 @@ def plot_reconstructed_data3d(R, mean, sd, slice_number, pos,
             os.makedirs(mdir)
         fpath = kwargs.get('filepath')
     sparsity = kwargs.get('sparsity')
+    cmap = kwargs.get('cmap', 'nipy_spectral')
     z_vec = kwargs.get('z_vec')
     z_vec_label = kwargs.get('z_vec_label')
     z_vec_units = kwargs.get('z_vec_units')
@@ -578,7 +585,7 @@ def plot_reconstructed_data3d(R, mean, sd, slice_number, pos,
     my_colors = ['black', 'red', 'green', 'gray', 'orange', 'blue']
     fig, ax = plt.subplots(2, 2, figsize=(14, 14))
     ax[0, 0].imshow(
-        np.sum(R[:, :, s-spw:s+spw], axis=-1), cmap='nipy_spectral')
+        np.sum(R[:, :, s-spw:s+spw], axis=-1), cmap=cmap)
     for p, col in zip(pos, my_colors):
         ax[0, 0].scatter(p[1], p[0], c=col)
         ax[0, 1].plot(z_vec, R[p[0], p[1], :], c=col)
@@ -594,7 +601,7 @@ def plot_reconstructed_data3d(R, mean, sd, slice_number, pos,
         else:
             _ax.set_title('Input data')
     ax[1, 0].imshow(
-        np.sum(Rtest[:, :, s-spw:s+spw], axis=-1), cmap='nipy_spectral')
+        np.sum(Rtest[:, :, s-spw:s+spw], axis=-1), cmap=cmap)
     for p, col in zip(pos, my_colors):
         ax[1, 0].scatter(p[1], p[0], c=col)
         ax[1, 1].plot(z_vec, Rtest[p[0], p[1], :], c=col)
