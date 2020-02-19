@@ -752,9 +752,65 @@ def plot_exploration_results(R_all, mean_all, sd_all, R_true,
     plt.subplots_adjust(hspace=.4)
     plt.subplots_adjust(wspace=.3)
     plt.show()
-
+    
 
 def plot_inducing_points(hyperparams, **kwargs):
+    dims_ = hyperparams['inducing_points'][0].shape[-1]
+    if dims_ == 2:
+        plot_inducing_points_2d(hyperparams, **kwargs)
+    elif dims_ == 3:
+        plot_inducing_points_3d(hyperparams, **kwargs)
+    else:
+        raise NotImplementedError('Supports only 2D and 3D datasets')
+        
+
+def plot_inducing_points_2d(hyperparams, **kwargs):
+    """
+    Plots 2D trajectories if inducing points
+
+    Args:
+        hyperparams: dict
+            dictionary of hyperparameters
+    **Kwargs:
+        plot_from: int
+            plot from specific step
+        plot_to: int
+            plot till specific step
+        slice_step: int
+            plot every nth inducing point
+    """
+    learned_inducing_points = hyperparams['inducing_points']
+    indp_nth = kwargs.get('slice_step')
+    plot_from, plot_to = kwargs.get('plot_to'), kwargs.get('plot_from')
+    if plot_from is None:
+        plot_from = 0
+    if plot_to is None:
+        plot_to = len(learned_inducing_points)
+    if indp_nth is None:
+        indp_nth = 1
+    fig = plt.figure(figsize=(20, 9))
+    ax = fig.add_subplot(121)
+    ax.set_xlabel('x coordinate (px)', fontsize=14)
+    ax.set_ylabel('y coordinate (px)', fontsize=14)
+    ax.set_title('Evolution of inducing points', fontsize=16)
+    ax.set_aspect('auto')# 'equal' doesn't work in matplotlib 3.1.1
+    colors = plt.cm.jet(
+        np.linspace(0,1,len(learned_inducing_points[plot_from:plot_to]))
+    )
+    for xy, c in zip(learned_inducing_points[plot_from:plot_to], colors):
+        x, y = xy.T
+        ax.scatter(x[::indp_nth], y[::indp_nth], c=[c], s=.15)
+    clrbar = np.linspace(
+        0, len(learned_inducing_points[plot_from:plot_to])).reshape(-1, 1)
+    ax2 = fig.add_axes([.42, .1, .1, .8])
+    img = plt.imshow(clrbar, cmap="jet")
+    plt.gca().set_visible(False)
+    clrbar_ = plt.colorbar(img, ax=ax2, orientation='vertical')
+    clrbar_.set_label('SVI iterations', fontsize=14, labelpad=10)
+    plt.show()
+
+
+def plot_inducing_points_3d(hyperparams, **kwargs):
     """
     Plots 3D trajectories if inducing points
 
