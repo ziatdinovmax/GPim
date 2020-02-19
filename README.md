@@ -62,7 +62,7 @@ gprutils.plot_inducing_points(hyperparams)
 
 
 ### Command line usage
-To perform GP-based reconstruction of sparse 2D image or sparse hyperspectral 3D data (datacube where measurements (spectroscopic curves) are missing for various xy positions), use ```reconstruct.py``` file from this repo:
+To perform GP-based reconstruction of sparse 2D image or sparse hyperspectral 3D data (datacube where measurements (spectroscopic curves) are missing for various xy positions), use ```reconstruct.py``` file from the [examples](https://github.com/ziatdinovmax/GPim/tree/master/examples):
 ```
 python3 reconstruct.py <path/to/file.npy>
 ```
@@ -70,7 +70,7 @@ The missing values in the sparse data must be [NaNs](https://docs.scipy.org/doc/
 
 **TODO:** Add SKI kernel option.
 
-To perform GP-guided sample exploration with hyperspectral (3D) measurements based on the reduction of maximal uncertainty, use ```explore.py``` file from this repo: 
+To perform GP-guided sample exploration with hyperspectral (3D) measurements based on the reduction of maximal uncertainty, use ```explore.py``` file from the [examples](https://github.com/ziatdinovmax/GPim/tree/master/examples): 
 ```
 python3 explore.py <path/to/file.npy>
 ```
