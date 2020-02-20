@@ -12,6 +12,10 @@ GP for 3D hyperspectral data: https://arxiv.org/abs/1911.11348
 
 GP for 4D hyperspectral data: https://arxiv.org/abs/2002.03591
 
+*Who should use it?*
+
+The intended audience are domain scientists (for example, microscopists) with a basic knowledge of python.
+
 ## Installation
 
 To use it, first run:
@@ -20,9 +24,6 @@ To use it, first run:
 pip install git+https://github.com/ziatdinovmax/GPim.git
 ```
 
-## Who should use it
-
-The intended audience are domain scientists (for example, microscopists) with a basic knowledge of python.
 
 ## How to use
 
