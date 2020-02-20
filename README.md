@@ -90,6 +90,8 @@ It is strongly recommended to run the codes with a GPU hardware accelerator. If 
 
 2. Add more utility functions for 4D datasets
 
-3. Add GP for image registration
+3. Add option to run GP on multiple GPUs
 
-4. Add docs
+4. Add GP for image registration
+
+5. Add docs
