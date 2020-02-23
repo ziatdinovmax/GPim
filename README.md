@@ -15,7 +15,7 @@ GP for 4D hyperspectral data: https://arxiv.org/abs/2002.03591
 *The intended audience are domain scientists (for example, microscopists) with a basic knowledge of python.*
 
 <p align="center">
-  <img src="https://github.com/ziatdinovmax/GPim/blob/master/misc/GPim_illustration.png" width="75%" title="GPim">
+  <img src="https://github.com/ziatdinovmax/GPim/blob/master/misc/GPim_illustration_v2.png" width="75%" title="GPim">
 <p align="justify">
 
 ## Installation
