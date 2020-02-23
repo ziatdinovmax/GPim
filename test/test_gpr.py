@@ -26,14 +26,17 @@ def test_gpr_2d(kernel):
     assert ssim(mean, R_) > 0.95
     assert np.linalg.norm(mean - R_) < 3
 
-
-def test_gpr_3d_sanity_test(): # sanity check only due to comput cost
+@pytest.mark.parametrize('kernel', ['RBF', 'Matern52'])
+def test_gpr_3d(kernel): # sanity check only due to comput cost
     R = np.load(test_data3d)
     X = gprutils.get_sparse_grid(R)
     X_true = gprutils.get_grid_indices(R)
     mean, sd, hyperparam = gpr.reconstructor(
         X, R, X_true,
-        kernel='RBF', lengthscale=None,
+        kernel=kernel, lengthscale=None,
         indpoints=50, learning_rate=0.1,
-        iterations=12, use_gpu=False,
-        verbose=False).run()
+        iterations=2, use_gpu=False,
+        verbose=True).run()
+    assert mean.shape == sd.shape == R.flatten().shape
+    assert not np.isnan(mean).any()
+    assert not np.isnan(sd).any()
