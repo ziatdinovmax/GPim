@@ -81,12 +81,14 @@ class skreconstructor:
         self.X, self.y, self.Xtest = X, y, Xtest
         self.toeplitz = gpytorch.settings.use_toeplitz(True)
         self.maxroot = gpytorch.settings.max_root_decomposition_size(maxroot)
-        if use_gpu:
+        if use_gpu and torch.cuda.is_available():
             torch.cuda.empty_cache()
             torch.set_default_tensor_type(torch.cuda.DoubleTensor)
             self.X, self.y = self.X.cuda(), self.y.cuda()
             self.Xtest = self.Xtest.cuda()
             self.toeplitz = gpytorch.settings.use_toeplitz(False)
+        else:
+            torch.set_default_tensor_type(torch.DoubleTensor)
         self.likelihood = gpytorch.likelihoods.GaussianLikelihood()
         _kernel = get_kernel(kernel, input_dim,
                              use_gpu, lengthscale=lengthscale,
