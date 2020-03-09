@@ -869,13 +869,3 @@ def plot_inducing_points_3d(hyperparams, **kwargs):
     clrbar_ = plt.colorbar(img, ax=ax2, orientation='vertical')
     clrbar_.set_label('SVI iterations', fontsize=14, labelpad=10)
     plt.show()
-
-
-def plot_reconstructed_data(R, mean, sd,
-                            slice_number, pos,
-                            spec_window=2, save_fig=False,
-                            **kwargs):
-
-    return plot_reconstructed_data3d(
-        R, mean, sd, slice_number, pos,
-        spec_window=2, save_fig=False, **kwargs)
