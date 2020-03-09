@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.com/ziatdinovmax/atomai.svg?branch=master)](https://travis-ci.com/ziatdinovmax/atomai)
 # GPim
 
 ## What is GPim?
