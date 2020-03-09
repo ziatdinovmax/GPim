@@ -1,9 +1,13 @@
 '''
-(Sparse) Gaussian process regression: model training, prediction and uncertainty exploration
+gpr.py
+======
 
-Serves as a high-level wrapper for Gaussian processes module 
+Sparse Gaussian process regression:
+model training, prediction and uncertainty exploration
+
+This module serves as a high-level wrapper for sparse Gaussian processes module
 from Pyro probabilistic programming library (https://pyro.ai/)
-for easy work with scientific image (2D) and hyperspectral (3D, 4D) data.
+for easy work with scientific image (2D) and hyperspectral (3D) data.
 
 Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
 '''
@@ -21,65 +25,65 @@ import warnings
 class reconstructor:
     """
     Class for Gaussian process regression-based reconstuction
-    of sparse 2D image and 3D spectroscopic datasets, 
+    of sparse 2D image and 3D spectroscopic datasets,
     and sample exploration with hyperspectral measurements
-    based on maximal uncertainty reduction
+    based on maximal uncertainty reduction.
 
     Args:
-        X:  c x  N x M x L or c x N x M ndarray
-            Grid indices.
-            c is equal to the number of coordinate dimensions.
+        X (ndarray):
+            Grid indices with dimension c x  N x M x L or c x N x M
+            where c is equal to the number of coordinates.
             For example, for xyz coordinates, c = 3.
-        y: N x M x L or N x M ndarray
-            Observations (data points)
-        X_test: N x M x L or N x M ndarray
+        y (ndarray):
+            Observations (data points) with dimension N x M x L or N x M
+        X_test (ndarray):
             "Test" points (for prediction with a trained GP model)
-        kernel: str
-            kernel type
-        lengthscale: list of two lists
-            determines lower (1st list) and upper (2nd list) bounds
-            for kernel lengthscale(s)
-        indpoints: int
-            number of inducing points for SparseGPRegression
-        input_dim: int
-            number of lengthscale dimensions (1 or 3)
-        learning_rate: float
-            learning rate
-        iterations: int
-            number of SVI training iteratons
-        use_gpu: bool
-            Uses GPU hardware accelerator when set to 'True'
-        verbose: bool
-            prints statistics after each 100th training iteration
-        
-    **Kwargs:
-        amplitude: kernel variance or amplitude squared
+            with dimension N x M x L or N x M
+        kernel (str):
+            Kernel type ('RBF', 'Matern52', 'RationalQuadratic')
+        lengthscale (list of two lists):
+            Determines lower (1st list) and upper (2nd list) bounds
+            for kernel lengthscales. The number of elements in each list
+            is equal to the dataset dimensionality.
+        indpoints (int):
+            Number of inducing points for SparseGPRegression
+        learning_rate (float):
+            Learning rate for model training
+        iterations (int): Number of SVI training iteratons
+        use_gpu (bool):
+            Uses GPU hardware accelerator when set to 'True'.
+            Notice that for large datasets training model without GPU
+            is extremely slow.
+        verbose (bool):
+            Prints training statistics after each 100th training iteration
+        **amplitude (float): kernel variance or amplitude squared
 
     Methods:
         train:
             Training sparse GP regression model
         predict:
-            Using trained GP regression model to make predictions
+            Using trained GP regression model to make prediction
+            on test dataset
         run:
-            Combines training and prediction to output mean, SD
-            and hyperaprameters as a function of SVI steps
+            Combines training and prediction steps to output mean,
+            standard deviation and hyperaprameters evolution during training
         step:
-            Combines a single model training and prediction
+            Combines a single model training and prediction steps
             to find point with max uncertainty in the data
     """
-    def __init__(self, 
-                 X, 
-                 y, 
+    def __init__(self,
+                 X,
+                 y,
                  Xtest,
-                 kernel, 
+                 kernel,
                  lengthscale=None,
-                 indpoints=1000, 
-                 learning_rate=5e-2, 
+                 indpoints=1000,
+                 learning_rate=5e-2,
                  iterations=1000,
-                 use_gpu=False, 
+                 use_gpu=False,
                  verbose=False,
                  **kwargs):
-        
+
         input_dim = np.ndim(y)
         if use_gpu and torch.cuda.is_available():
             torch.cuda.empty_cache()
@@ -93,10 +97,10 @@ class reconstructor:
             indpoints = len(self.X)
         Xu = self.X[::len(self.X) // indpoints]
         if lengthscale is None:
-            lengthscale = [[0. for l in range(input_dim)], 
+            lengthscale = [[0. for l in range(input_dim)],
                            [np.mean(y.shape) / 2 for l in range(input_dim)]]
-        kernel = get_kernel(kernel, input_dim, 
-                            lengthscale, use_gpu, 
+        kernel = get_kernel(kernel, input_dim,
+                            lengthscale, use_gpu,
                             amplitude=kwargs.get('amplitude'))
         self.fulldims = Xtest.shape[1:]
         self.Xtest = gprutils.prepare_test_data(Xtest)
@@ -125,11 +129,9 @@ class reconstructor:
     def train(self, **kwargs):
         """
         Training sparse GP regression model
-        **Kwargs:
-            learning_rate: float
-                learning rate
-            iterations: int
-                number of SVI training iteratons
+        Args:
+            **learning_rate (float): learning rate
+            **iterations (int): number of SVI training iteratons
         """
         if kwargs.get("learning_rate") is not None:
             self.learning_rate = kwargs.get("learning_rate")
@@ -139,7 +141,6 @@ class reconstructor:
         pyro.clear_param_store()
         optimizer = torch.optim.Adam(self.sgpr.parameters(), lr=self.learning_rate)
         loss_fn = pyro.infer.Trace_ELBO().differentiable_loss
-        num_steps = self.iterations
         start_time = time.time()
         print('Model training...')
         for i in range(self.iterations):
@@ -171,10 +172,10 @@ class reconstructor:
 
     def predict(self):
         """
-        Use trained GPRegression model to make predictions
-        
+        Use trained GP regression model to make predictions
+
         Returns:
-            predictive mean and variance
+            Predictive mean and variance
         """
         print("Calculating predictive mean and variance...", end=" ")
         with torch.no_grad():
@@ -186,15 +187,16 @@ class reconstructor:
         """
         Train the initialized model and calculate predictive mean and variance
 
-        **Kwargs:
-            learning_rate: float
-                learning rate for GPR model training
-            steps: int
+        Args:
+            **learning_rate (float):
+                learning rate for GP regression model training
+            **steps (int):
                 number of SVI training iteratons
 
         Returns:
-            predictive mean and SD as flattened ndarrays
-            dictionary with hyperparameters as a function of SVI steps
+            Predictive mean and SD as flattened ndarrays and
+            dictionary with hyperparameters evolution
+            as a function of SVI steps
 
         """
         if kwargs.get("learning_rate") is not None:
@@ -217,19 +219,16 @@ class reconstructor:
         returning a new point with maximum uncertainty
 
         Args:
-            dist_edge: list with two integers
-                edge regions not considered for max uncertainty evaluation
-
-        **Kwargs:
-            learning_rate: float
-                learning rate for GPR model training
-            steps: int
+            dist_edge (list with two integers):
+                edge regions not considered in max uncertainty evaluation
+            **learning_rate (float):
+                learning rate for GP regression model training
+            **steps (int):
                 number of SVI training iteratons
 
         Returns:
-            lists of indices and values for points with maximum uncertainty, 
-            predictive mean and SD (as flattened arrays)
-
+            lists of indices and values for points with maximum uncertainty,
+            predictive mean and standard deviation (as flattened numpy arrays)
         """
         if kwargs.get("learning_rate") is not None:
             self.learning_rate = kwargs.get("learning_rate")
@@ -251,20 +250,18 @@ def get_kernel(kernel_type, input_dim, lengthscale, use_gpu=False, **kwargs):
     RBF, Rational Quadratic, Matern
 
     Args:
-        kernel_type: str
+        kernel_type (str):
             kernel type ('RBF', 'Rational Quadratic', Matern52')
-        input_dim: int
+        input_dim (int):
             number of input dimensions
             (equal to number of feature vector columns)
-        lengthscale: list of two lists
+        lengthscale (list of two lists):
             determines lower (1st list) and upper (2nd list) bounds
-            for kernel lengthscale(s).
-            number of elements in each list is equal to the input dimensions
-        use_gpu: bool
+            for kernel lengthscale(s). Number of elements in each list
+            is equal to the input dimensions
+        use_gpu (bool):
             sets default tensor type to torch.cuda.DoubleTensor
-
-    **Kwargs:
-        amplitude: list with two floats
+        **amplitude (list with two floats):
             determines bounds on kernel amplitude parameter
             (default is from 1e-4 to 10)
 
@@ -279,7 +276,7 @@ def get_kernel(kernel_type, input_dim, lengthscale, use_gpu=False, **kwargs):
     amp = kwargs.get('amplitude')
     lscale = lengthscale
     amp = [1e-4, 10.] if amp is None else amp
-    # Needed in Pyro < 1.0.0  
+    # Needed in Pyro < 1.0.0
     lscale_ = torch.tensor(lscale[0]) + 1e-5
 
     # initialize the kernel
@@ -301,10 +298,10 @@ def get_kernel(kernel_type, input_dim, lengthscale, use_gpu=False, **kwargs):
         print('Select one of the currently available kernels:',\
               '"RBF", "RationalQuadratic", "Matern52"')
         raise
-        
+
     with warnings.catch_warnings():  # TODO: use PyroSample to set priors
         warnings.filterwarnings("ignore", category=UserWarning)
-        
+
         # set priors
         kernel.set_prior(
             "variance",

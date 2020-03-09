@@ -1,10 +1,12 @@
 '''
+skgpr.py
+======
+
 Gaussian process regression model with a structured kernel interpolation.
 
-Serves as a high-level wrapper for GPyTorch's (https://gpytorch.ai) 
+Serves as a high-level wrapper for GPyTorch's (https://gpytorch.ai)
 Gaussian processes module with a structred kernel interpolation method
-for easy work with scientific image (2D) and hyperspectral (3D, 4D) data. 
-WORK IN PROGRESS. More details TBA
+for easy work with scientific image (2D) and hyperspectral (3D, 4D) data.
 
 Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
 '''
@@ -19,62 +21,64 @@ import gpytorch
 class skreconstructor:
     """
     GP regression model with structured kernel interpolation
-    for 2D/3D images reconstruction
+    for 2D/3D/4D image data reconstruction
 
     Args:
-        X:  c x  N x M x L or c x N x M ndarray
-            Grid indices.
-            c is equal to the number of coordinate dimensions.
-            For example, for xyz coordinates, c = 3.
-        y: N x M x L or N x M ndarray
-            Observations (data points)
-        kernel: str
-            kernel type
-        input_dim: int
-            number of input dimensions
-            (equal to number of feature vector columns)
-        lengthscale: list of two lists
-            determines lower (1st list) and upper (2nd list) bounds
-            for kernel lengthscale(s)
-        lengthscale_init: list with float(s)
-            initializes lenghtscale at this value
-        iterations: int
-            number of training steps
-        learning_rate: float
-            learning rate for model training
-        grid_points_ratio: float
-            ratio of inducing points to overall points
-        max_root: int
+        X (ndarray):
+            Grid indices with dimension c x N x M or c x N x M x L or
+            c x N x M x L x K, where c is equal to the number of coordinates.
+            For example, for xyz coordinates, c = 3
+        y (ndarray):
+            Observations (data points) with dimension N x M or N x M x L
+            or N x M x L x K
+        X_test (ndarray):
+            "Test" points (for prediction with a trained GP model)
+            with dimension N x M x L or N x M
+        kernel (str):
+            Kernel type ('RBF' or 'Matern52')
+        lengthscale (list of two lists):
+            Determines lower (1st list) and upper (2nd list) bounds
+            for kernel lengthscales. The number of elements in each list
+            is equal to the dataset dimensionality.
+        lengthscale_init (list with floats):
+            Initializes lenghtscales at this values
+        iterations (int):
+            Number of training steps
+        learning_rate (float):
+            Learning rate for model training
+        grid_points_ratio (float):
+            Ratio of inducing points to overall points
+        max_root (int):
             Maximum number of Lanczos iterations to perform
             in prediction stage
-        num_batches: int
-            number of batches for splitting the Xtest array
+        num_batches (int):
+            Number of batches for splitting the Xtest array
             (for large datasets, you may not have enough GPU memory
             to process the entire dataset at once)
-        calculate_sd: bool
-            Whether to calculate SD in prediction stage
-            (possible only when num_batches = 1)
-        use_gpu: bool
+        calculate_sd (bool):
+            Calculates SD in prediction stage
+            (possible only when num_batches == 1)
+        use_gpu (bool):
             Uses GPU hardware accelerator when set to 'True'
-        verbose: bool
+        verbose (bool):
             Print statistics after each training iteration
     """
-    def __init__(self, 
-                 X, 
-                 y, 
+    def __init__(self,
+                 X,
+                 y,
                  Xtest,
-                 kernel='Matern52', 
-                 lengthscale=None, 
+                 kernel='Matern52',
+                 lengthscale=None,
                  lengthscale_init=None,
-                 iterations=50, 
-                 learning_rate=.1, 
+                 iterations=50,
+                 learning_rate=.1,
                  grid_points_ratio=1.,
-                 maxroot=100, 
-                 num_batches=10, 
+                 maxroot=100,
+                 num_batches=10,
                  calculate_sd=0,
-                 use_gpu=1, 
+                 use_gpu=1,
                  verbose=0):
-        
+
         input_dim = np.ndim(y)
         X, y = gprutils.prepare_training_data(X, y)
         Xtest = gprutils.prepare_test_data(Xtest)
@@ -150,7 +154,9 @@ class skreconstructor:
         return
 
     def predict(self, **kwargs):
-        "Makes a prediction with trained GP regression model"
+        """
+        Makes a prediction with trained GP regression model
+        """
         if kwargs.get("Xtest") is not None:
             self.Xtest = gprutils.prepare_test_data(kwargs.get("Xtest"))
             if next(self.model.parameters()).is_cuda:
@@ -199,21 +205,22 @@ class skgprmodel(gpytorch.models.ExactGP):
     GP regression model with structured kernel interpolation
 
     Args:
-    X:  c x  N x M x L or c x N x M ndarray
-            Grid indices.
-            c is equal to the number of coordinate dimensions.
-            For example, for xyz coordinates, c = 3.
-        y: N x M x L or N x M ndarray
-            Observations (data points)
-        kernel: str
-            gpytorch kernel object
-        likelihood: gpytorch likelihood object
-            Gaussian likelihood
-        input_dim: int
-            number of input dimensions
+        X (ndarray):
+            Grid indices with dimension n x c,
+            where n is the number of observation points
+            and c is equal to the number of coordinates.
+            For example, for xyz coordinates, c = 3
+        y (ndarray):
+            Observations (data points) with dimension n
+        kernel (gpytorch kernel object):
+            'RBF' or 'Matern52' kernels
+        likelihood (gpytorch likelihood object):
+            The Gaussian likelihood
+        input_dim (int):
+            Number of input dimensions
             (equal to number of feature vector columns)
-        grid_points_ratio: float
-            ratio of inducing points to overall points
+        grid_points_ratio (float):
+            Ratio of inducing points to overall points
     """
 
     def __init__(self, X, y, kernel, likelihood,
@@ -236,21 +243,21 @@ class skgprmodel(gpytorch.models.ExactGP):
 def get_kernel(kernel_type, input_dim, on_gpu=True, **kwargs):
     """
     Initalizes one of the following kernels: RBF, Matern
+
     Args:
-        kernel_type: str
-            kernel type ('RBF', Matern52')
-        input_dim: int
-            number of input dimensions
+        kernel_type (str):
+            Kernel type ('RBF', Matern52')
+        input_dim (int):
+            Number of input dimensions
             (equal to number of feature vector columns)
-        on_gpu: bool
-            sets default tensor type to torch.cuda.DoubleTensor
-    **Kwargs:
-        lengthscale: list of two lists
-            determines lower (1st list) and upper (2nd list) bounds
+        on_gpu (bool):
+            Sets default tensor type to torch.cuda.DoubleTensor
+        **lengthscale (list of two lists):
+            Determines lower (1st list) and upper (2nd list) bounds
             for kernel lengthscale(s);
             number of elements in each list is equal to the input dimensions
-        lengthscale_init: list with float(s)
-            initializes lenghtscale at this value
+        **lengthscale_init (list with float):
+            Initializes lenghtscale at this value
     Returns:
         kernel object
     """
