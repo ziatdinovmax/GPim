@@ -21,7 +21,7 @@ autodoc_mock_imports = [
 
 # -- Project information -----------------------------------------------------
 
-project = 'AtomAI'
+project = 'GPim'
 copyright = '2020, Maxim Ziatdinov'
 author = 'Maxim Ziatdinov'
 
