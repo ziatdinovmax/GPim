@@ -25,7 +25,10 @@ def max_uncertainty(sd, dist_edge):
 
     Args:
         sd (ndarray)
-            Predicted standard deviation with dimensions N x M x L
+            Predicted standard deviation with dimensions
+            :math:`N \\times M \\times L`. For hyperspectral data,
+            *N* and *M* usually correspond to spatial dimensions,
+            whereas *L* is an "energy"dimension
         dist_edge (list of two integers):
             Edge regions not considered for max uncertainty evaluation
 
@@ -109,16 +112,16 @@ def do_measurement(R_true, X_true, R, X, uncertmax, measure):
     Args:
         R_true (ndarray):
             Datacube with full observations ('ground truth');
-            dimensions are N x M x L.
+            dimensions are :math:`N \\times M \\times L`
         X_true (ndarray):
             Grid indices for full observation;
-            dimensions are N x M x L x 3
+            dimensions are :math: `N \\times M \\times L \\times 3`
         R (ndarray):
             Datacube with partial observations (missing values are NaNs);
-            dimensions are N x M x L.
+            dimensions are :math:`N \\times M \\times L`.
         X (ndarray):
             Grid indices for partial observations (missing points are NaNs)
-            dimensions are N x M x L x 3
+            dimensions are :math: `N \\times M \\times L \\times 3`
         uncertmax (list):
             indices of point with maximum uncertainty
             (as determined by GP regression model)
@@ -141,14 +144,17 @@ def prepare_training_data(X, y):
 
     Args:
         X (ndarray):
-            Grid indices with dimensions c x  N x M x L, where
-            c is equal to the number of coordinates.
-            For example, for xyz coordinates, c = 3.
+            Grid indices with dimensions
+            :math:`c \\times N \\times M \\times L`,
+            where *c* is equal to the number of coordinates
+            (for example, for xyz coordinates, *c* = 3)
         y (ndarray):
             Observations (data points) with dimensions N x M x L
 
     Returns:
-        Pytorch tensors with dimensions M x N x L x c and N x M x L
+        Pytorch tensors with dimensions
+        :math:`N \\times M \\times L \\times c`
+        and :math:`N \\times M \\times L`
     """
 
     tor = lambda n: torch.from_numpy(n)
@@ -165,12 +171,12 @@ def prepare_test_data(X):
 
     Args:
         X (ndarray):
-            Grid indices with dimensions c x  N x M x L, where
-            c is equal to the number of coordinates.
-            For example, for xyz coordinates, c = 3.
+            Grid indices with dimensions :math:`c \\times N \\times M \\times L`
+            where *c* is equal to the number of coordinates
+            (for example, for xyz coordinates, *c* = 3)
 
     Returns:
-        torch tensor with dimensions N x M x L x c
+        Pytorch tensor with dimensions :math:`N \\times M \\times L \\times c`
     """
 
     X = X.reshape(X.shape[0], np.product(X.shape[1:])).T
@@ -337,7 +343,7 @@ def corrupt_image2d(X_true, R_true, prob, replace_w_zeros):
 
 
     Returns:
-        c x M x N ndarray of grid coordinates and M x N ndarray of observatons
+        3D ndarray of grid coordinates and 2D ndarray of observatons
         where the part of points is replaced with NaNs.
     """
     e1, e2 = R_true.shape
@@ -381,8 +387,8 @@ def corrupt_image3d(X_true, R_true, prob, replace_w_zeros):
 
 
     Returns:
-        c x M x N x L ndarray of grid coordinates
-        and M x N x L ndarray of observatons where
+        4D ndarray of grid coordinates and
+        3D ndarray of observatons where
         certain % of points is replaced with NaNs
         (note that for every corrupted (x, y) point
         we remove all z values associated with this point)
@@ -422,7 +428,7 @@ def open_edge_points(R, R_true, s=6):
             step value, which determines the density of opened edge points
 
     Returns:
-        N x M x L ndarray with opened edge points
+        3D ndarray with opened edge points
     """
     e1, e2, _ = R_true.shape
     R[0, ::s, :] = R_true[0, ::s, :]
@@ -475,7 +481,8 @@ def plot_raw_data(raw_data, slice_number, pos,
 
     Args:
         raw_data (3D ndarray):
-            hyperspectral cube
+            hyperspectral cube (the first two dimensions are *xy* coordinates
+            and the last dimension is a "spectroscopic" dimension)
         slice_number (int):
             slice from datacube to visualize
         pos (list of lists):
@@ -685,8 +692,8 @@ def plot_exploration_results(R_all, mean_all, sd_all, R_true,
         sd_all (list of ndarrays):
             Integrated (along energy dimension) SD at each exploration step
         R_true (ndarray):
-            Ground truth data (full observations) for synthetic data
-            OR array of zeros/NaNs with N x M x L dims for real experiment
+            3D array with ground truth data (full observations) for simulated
+            experiment OR a 3D array of zeros/NaNs for real experiment
         episodes (list of ints):
             list with the numbers indicating which iteration steps to visualize
         slice_number (int):

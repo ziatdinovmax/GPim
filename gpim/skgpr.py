@@ -25,15 +25,23 @@ class skreconstructor:
 
     Args:
         X (ndarray):
-            Grid indices with dimension c x N x M or c x N x M x L or
-            c x N x M x L x K, where c is equal to the number of coordinates.
-            For example, for xyz coordinates, c = 3
+            Grid indices with dimension :math:`c \\times N \\times M`,
+            :math:`c \\times N \\times M \\times L` or
+            :math:`c \\times N \\times M \\times L \\times K`,
+            where *c* is equal to the number of coordinates
+            (for example, for xyz coordinates, *c* = 3)
         y (ndarray):
-            Observations (data points) with dimension N x M or N x M x L
-            or N x M x L x K
-        X_test (ndarray):
+            Observations (data points) with dimension :math:`N \\times M`,
+            :math:`N \\times M \\times L` or
+            :math:`N \\times M \\times L \\times K`.
+            Typically, for 2D image *N* and *M* are image height and width.
+            For 3D hyperspectral data *N* and *M* are spatial dimensions
+            and *L* is a "spectroscopic" dimension (e.g. voltage or wavelength).
+            For 4D datasets, both *L* and *K* are "spectroscopic" dimensions.
+        Xtest (ndarray):
             "Test" points (for prediction with a trained GP model)
-            with dimension N x M x L or N x M
+            with dimension :math:`N \\times M`, :math:`N \\times M \\times L`
+            or :math:`N \\times M \\times L \\times K`
         kernel (str):
             Kernel type ('RBF' or 'Matern52')
         lengthscale (list of two lists):
@@ -212,10 +220,10 @@ class skgprmodel(gpytorch.models.ExactGP):
 
     Args:
         X (ndarray):
-            Grid indices with dimension n x c,
-            where n is the number of observation points
-            and c is equal to the number of coordinates.
-            For example, for xyz coordinates, c = 3
+            Grid indices with dimension :math:`n \\times c`,
+            where *n* is the number of observation points
+            and *c* is equal to the number of coordinates
+            (for example, for xyz coordinates, *c* = 3)
         y (ndarray):
             Observations (data points) with dimension n
         kernel (gpytorch kernel object):

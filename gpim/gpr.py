@@ -31,14 +31,19 @@ class reconstructor:
 
     Args:
         X (ndarray):
-            Grid indices with dimension c x  N x M x L or c x N x M
-            where c is equal to the number of coordinates.
-            For example, for xyz coordinates, c = 3.
+            Grid indices with dimensions :math:`c \\times N \\times M`
+            or :math:`c \\times N \\times M \\times L`
+            where *c* is equal to the number of coordinates
+            (for example, for *xyz* coordinates, *c* = 3)
         y (ndarray):
-            Observations (data points) with dimension N x M x L or N x M
-        X_test (ndarray):
+            Observations (data points) with dimensions
+            :math:`N \\times M` or :math:`N \\times M \\times L`.
+            Typically, for 2D image *N* and *M* are image height and width,
+            whereas for 3D hyperspectral data *N* and *M* are spatial dimensions
+            and *L* is a spectorcopic dimension (e.g. voltage or wavelength).
+        Xtest (ndarray):
             "Test" points (for prediction with a trained GP model)
-            with dimension N x M x L or N x M
+            with dimensions :math:`N \\times M` or :math:`N \\times M \\times L`
         kernel (str):
             Kernel type ('RBF', 'Matern52', 'RationalQuadratic')
         lengthscale (list of two lists):
