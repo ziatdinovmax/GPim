@@ -229,7 +229,7 @@ def get_full_grid(R, dense_x=1.):
     return X_grid
 
 
-def get_sparse_grid(R_true):
+def get_sparse_grid(R):
     """
     Returns sparse grid for sparse image data
 
@@ -240,18 +240,18 @@ def get_sparse_grid(R_true):
     Returns:
         Sparse grid indices
     """
-    assert np.isnan(R_true).any(),\
+    assert np.isnan(R).any(),\
     "Missing values in sparse data must be represented as NaNs"
-    X_true = get_grid_indices(R_true)
-    if np.ndim(R_true) == 2:
-        e1, e2 = R_true.shape
+    X_true = get_grid_indices(R)
+    if np.ndim(R) == 2:
+        e1, e2 = R.shape
         X = X_true.copy().reshape(2, e1*e2)
-        X[:, np.where(np.isnan((R_true.flatten())))] = np.nan
+        X[:, np.where(np.isnan((R.flatten())))] = np.nan
         X = X.reshape(2, e1, e2)
-    elif np.ndim(R_true) == 3:
-        e1, e2, e3 = R_true.shape
+    elif np.ndim(R) == 3:
+        e1, e2, e3 = R.shape
         X = X_true.copy().reshape(3, e1*e2, e3)
-        indices = np.where(np.isnan((R_true.reshape(e1*e2, e3))))[0]
+        indices = np.where(np.isnan((R.reshape(e1*e2, e3))))[0]
         X[:, indices] = np.nan
         X = X.reshape(3, e1, e2, e3)
     else:
