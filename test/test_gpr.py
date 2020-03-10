@@ -32,7 +32,7 @@ def test_gpr_3d(kernel): # sanity check only due to comput cost
     R = np.load(test_data3d)
     X = gprutils.get_sparse_grid(R)
     X_true = gprutils.get_full_grid(R)
-    mean, sd, hyperparam = gpr.reconstructor(
+    mean, sd, _ = gpr.reconstructor(
         X, R, X_true,
         kernel=kernel, lengthscale=None,
         indpoints=50, learning_rate=0.1,
