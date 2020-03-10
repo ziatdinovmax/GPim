@@ -43,7 +43,7 @@ import numpy as np
 R = np.load('sparse_exp_data.npy') 
 
 # Get full grid indices
-X_true = gprutils.get_grid_indices(R)
+X_true = gprutils.get_full_grid(R, dense_x=1)
 # Get sparse grid indices
 X = gprutils.get_sparse_grid(R)
 # Kernel lengthscale constraints (optional)
