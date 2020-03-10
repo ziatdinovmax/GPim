@@ -443,9 +443,9 @@ def plot_kernel_hyperparams(hyperparams):
             (see gpr.explorer.train_sgpr_model)
     """
     if 'variance' in hyperparams.keys():
-        fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(16, 4))
+        _, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(16, 4))
     else:
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))
+        _, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))
     l = ax1.plot(hyperparams['lengthscale'], linewidth=3)
     ax1.set_title('lengthscale')
     ax1.set_xlabel('SVI iteration')
