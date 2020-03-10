@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pytest
 from skimage.metrics import structural_similarity as ssim
+from numpy.testing import assert_
 from gpim import skgpr, gprutils
 
 test_data = os.path.join(
@@ -24,8 +25,8 @@ def test_skgpr_2d(kernel):
         grid_points_ratio=1., learning_rate=0.1,
         iterations=20, calculate_sd=False, num_batches=1,
         use_gpu=False, verbose=False).run()
-    assert ssim(mean, R_) > 0.98
-    assert np.linalg.norm(mean - R_) < 1
+    assert_(ssim(mean, R_) > 0.98)
+    assert_(np.linalg.norm(mean - R_) < 1)
 
 
 @pytest.mark.parametrize('kernel', ['RBF', 'Matern52'])
@@ -39,7 +40,7 @@ def test_skgpr_3d(kernel):  # sanity check only, due to comput cost
         learning_rate=0.1, iterations=2,
         num_batches=100, calculate_sd=True,
         use_gpu=False, verbose=True).run()
-    assert mean.shape == sd.shape == R.flatten().shape
-    assert not np.isnan(mean).any()
-    assert not np.isnan(sd).any()
+    assert_(mean.shape == sd.shape == R.flatten().shape)
+    assert_(not np.isnan(mean).any())
+    assert_(not np.isnan(sd).any())
 
