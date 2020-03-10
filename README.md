@@ -26,7 +26,7 @@ GP for 4D hyperspectral data: https://arxiv.org/abs/2002.03591
 
 To use it, first run:
 
-```
+```bash
 pip install git+https://github.com/ziatdinovmax/GPim.git
 ```
 
