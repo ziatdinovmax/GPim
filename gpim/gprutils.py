@@ -181,11 +181,30 @@ def prepare_test_data(X):
 
 def get_grid_indices(R, dense_x=1.):
     """
-    Creates grid indices for 2D, 3D and 4D numpy arrays
+    Returns full and sparse grid indices for 2D and 3D arrays
 
     Args:
         R (ndarray):
-            Grid measurements as 2D or 3D numpy array
+            Sparse grid measurements as 2D or 3D numpy array
+        dense_x (float):
+            Determines grid density
+            (can be increased at prediction stage)
+    """
+    if np.ndim(R) > 3:
+        raise NotImplementedError(
+            "Currently supports only 2D and 3D arrays")
+    X_full = get_full_grid(R, dense_x)
+    X_sparse = get_sparse_grid(R)
+    return X_full, X_sparse
+
+
+def get_full_grid(R, dense_x=1.):
+    """
+    Creates grid indices for 2D-4D numpy arrays
+
+    Args:
+        R (ndarray):
+            Grid measurements as 2D-4D numpy array
         dense_x (float):
             Determines grid density
             (can be increased at prediction stage)
