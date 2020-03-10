@@ -7,3 +7,6 @@ pyro-ppl>=0.4.1
 gpytorch>=0.3.6
 scikit-image>=0.16.2
 pytest>=5.3.5
+sphinx>=2.4.4
+m2r>=0.2.1
+sphinx-rtd-theme>=0.4.3
