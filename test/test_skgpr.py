@@ -17,7 +17,7 @@ def test_skgpr_2d(kernel):
     R = np.load(test_data)
     R_ = np.load(test_expected_result)
     X = gprutils.get_sparse_grid(R)
-    X_true = gprutils.get_grid_indices(R)
+    X_true = gprutils.get_full_grid(R)
     mean, _ = skgpr.skreconstructor(
         X, R, X_true, kernel=kernel,
         lengthscale=[[1., 1.], [4., 4.]],
@@ -32,7 +32,7 @@ def test_skgpr_2d(kernel):
 def test_skgpr_3d(kernel):  # sanity check only, due to comput cost
     R = np.load(test_data3d)
     X = gprutils.get_sparse_grid(R)
-    X_true = gprutils.get_grid_indices(R)
+    X_true = gprutils.get_full_grid(R)
     (mean, sd), hyperparam = skgpr.skreconstructor(
         X, R, X_true, kernel=kernel,
         lengthscale=None, grid_points_ratio=.25,

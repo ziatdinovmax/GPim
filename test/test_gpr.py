@@ -17,7 +17,7 @@ def test_gpr_2d(kernel):
     R = np.load(test_data2d)
     R_ = np.load(test2d_expected_result)
     X = gprutils.get_sparse_grid(R)
-    X_true = gprutils.get_grid_indices(R)
+    X_true = gprutils.get_full_grid(R)
     mean, _, _ = gpr.reconstructor(
         X, R, X_true,
         kernel=kernel, lengthscale=[[1., 1.], [4., 4.]],
@@ -30,7 +30,7 @@ def test_gpr_2d(kernel):
 def test_gpr_3d(kernel): # sanity check only due to comput cost
     R = np.load(test_data3d)
     X = gprutils.get_sparse_grid(R)
-    X_true = gprutils.get_grid_indices(R)
+    X_true = gprutils.get_full_grid(R)
     mean, sd, hyperparam = gpr.reconstructor(
         X, R, X_true,
         kernel=kernel, lengthscale=None,
