@@ -243,7 +243,7 @@ def get_sparse_grid(R):
     Returns sparse grid for sparse image data
 
     Args:
-        R_true (ndarray):
+        R (ndarray):
             Sparse grid measurements (missing values are NaNs)
 
     Returns:
@@ -449,7 +449,7 @@ def plot_kernel_hyperparams(hyperparams):
     Args:
         hyperparams (dict):
             dictionary with kernel hyperparameters
-            (see gpr.explorer.train_sgpr_model)
+            (see gpr.reconstructor)
     """
     if 'variance' in hyperparams.keys():
         _, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(16, 4))
