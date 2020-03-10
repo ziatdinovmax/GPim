@@ -314,8 +314,8 @@ def corrupt_data_xy(X_true, R_true, prob=0.5, replace_w_zeros=False):
         replace_w_zeros (bool):
             Corrupts data with zeros instead of NaNs
 
-        Returns:
-            ndarays of grid indices (3D or 4D) and observations (2D or 3D)
+    Returns:
+        ndarays of grid indices (3D or 4D) and observations (2D or 3D)
     """
     if np.ndim(R_true) == 2:
         X, R = corrupt_image2d(X_true, R_true, prob, replace_w_zeros)
