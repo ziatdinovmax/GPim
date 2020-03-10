@@ -17,10 +17,8 @@ GP for 3D hyperspectral data: https://arxiv.org/abs/1911.11348
 GP for 4D hyperspectral data: https://arxiv.org/abs/2002.03591
 
 *The intended audience are domain scientists (for example, microscopists) with a basic knowledge of python.*
-
-<p align="center">
-  <img src="misc/GPim_illustration_v2.png" width="75%" title="GPim">
-<p align="justify">
+  
+![GPim](misc/GPim_illustration_v2.png)
 
 ## Installation
 
