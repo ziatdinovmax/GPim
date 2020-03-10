@@ -520,6 +520,8 @@ def plot_raw_data(raw_data, slice_number, pos,
 
 def plot_reconstructed_data2d(R, mean, save_fig=False, **kwargs):
     """
+    Plots original and GP-reconstructed data for 2D images
+
     Args:
         R (2D ndarray):
             Input image for GP regression
@@ -568,7 +570,9 @@ def plot_reconstructed_data3d(R, mean, sd, slice_number, pos,
                               spec_window=2, save_fig=False,
                               **kwargs):
     """
-    Args
+    Plots original and GP-reconstructed data for 3D images
+
+    Args:
         R (3D ndarray):
             Input image for GP regression
         mean (1D ndarray):
