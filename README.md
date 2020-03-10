@@ -4,6 +4,8 @@
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/07ee1606a88b48d1bc46453f3ae1b1c8)](https://app.codacy.com/manual/ziatdinovmax/GPim?utm_source=github.com&utm_medium=referral&utm_content=ziatdinovmax/GPim&utm_campaign=Badge_Grade_Dashboard)
 # GPim
 
+**Under active development (expect some breaking changes)**
+
 ## What is GPim?
 
 GPim is a python package that provides a systematic and easy way to apply Gaussian processes (GP) 
