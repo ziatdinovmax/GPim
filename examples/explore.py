@@ -54,7 +54,9 @@ X_true = gprutils.get_grid_indices(R_true)
 R = R_true*0
 R[R==0] = np.nan
 R = gprutils.open_edge_points(R, R_true)
-X, R = gprutils.corrupt_data_xy(X_true, R)
+# Get sparse and full grid indices
+X = gprutils.get_sparse_grid(R)
+X_true = gprutils.get_full_grid(R)
 dist_edge = [0, 0] # set to non-zero vals when edge points are not "opened"
 # Construct lengthscale constraints for all 3 dimensions
 LENGTH_CONSTR = [
