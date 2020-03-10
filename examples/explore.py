@@ -47,8 +47,6 @@ args = parser.parse_args()
 R_true = np.load(args.FILEPATH)
 if args.NORMALIZE and np.isnan(R_true).any() is False:
     R_true = (R_true - np.amin(R_true))/np.ptp(R_true)
-# Get "ground truth" grid indices
-X_true = gprutils.get_grid_indices(R_true)
 # Make initial set of measurements for exploration analysis.
 # Let's start with "opening" several points along each edge
 R = R_true*0
