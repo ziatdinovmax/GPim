@@ -57,19 +57,6 @@ class reconstructor:
         verbose (bool):
             Prints training statistics after each 100th training iteration
         **amplitude (float): kernel variance or amplitude squared
-
-    Methods:
-        train:
-            Training sparse GP regression model
-        predict:
-            Using trained GP regression model to make prediction
-            on test dataset
-        run:
-            Combines training and prediction steps to output mean,
-            standard deviation and hyperaprameters evolution during training
-        step:
-            Combines a single model training and prediction steps
-            to find point with max uncertainty in the data
     """
     def __init__(self,
                  X,
@@ -83,7 +70,10 @@ class reconstructor:
                  use_gpu=False,
                  verbose=False,
                  **kwargs):
-
+        """
+        Initiates reconstructor parameters
+        and pre-processes training and test data arrays
+        """
         input_dim = np.ndim(y)
         if use_gpu and torch.cuda.is_available():
             torch.cuda.empty_cache()
@@ -129,6 +119,7 @@ class reconstructor:
     def train(self, **kwargs):
         """
         Training sparse GP regression model
+
         Args:
             **learning_rate (float): learning rate
             **iterations (int): number of SVI training iteratons

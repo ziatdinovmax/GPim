@@ -78,7 +78,10 @@ class skreconstructor:
                  calculate_sd=0,
                  use_gpu=1,
                  verbose=0):
-
+        """
+        Initiates reconstructor parameters
+        and pre-processes training and test data arrays
+        """
         input_dim = np.ndim(y)
         X, y = gprutils.prepare_training_data(X, y)
         Xtest = gprutils.prepare_test_data(Xtest)
@@ -189,6 +192,9 @@ class skreconstructor:
         return mean
 
     def run(self):
+        """
+        Combines train and step methods
+        """
         self.train()
         prediction = self.predict()
         if next(self.model.parameters()).is_cuda:
@@ -225,6 +231,9 @@ class skgprmodel(gpytorch.models.ExactGP):
 
     def __init__(self, X, y, kernel, likelihood,
                  input_dim=3, grid_points_ratio=1.):
+        """
+        Initializes model parameters
+        """
         super(skgprmodel, self).__init__(X, y, likelihood)
         grid_size = gpytorch.utils.grid.choose_grid_size(
             X, ratio=grid_points_ratio)
@@ -234,7 +243,9 @@ class skgprmodel(gpytorch.models.ExactGP):
             scaled_kernel, grid_size=grid_size, num_dims=input_dim)
 
     def forward(self, x):
-        """Forward path"""
+        """
+        Forward path
+        """
         mean_x = self.mean_module(x)
         covar_x = self.covar_module(x)
         return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
@@ -242,7 +253,7 @@ class skgprmodel(gpytorch.models.ExactGP):
 
 def get_kernel(kernel_type, input_dim, on_gpu=True, **kwargs):
     """
-    Initalizes one of the following kernels: RBF, Matern
+    Initializes one of the following kernels: RBF, Matern
 
     Args:
         kernel_type (str):
@@ -268,8 +279,6 @@ def get_kernel(kernel_type, input_dim, on_gpu=True, **kwargs):
 
     lscale = kwargs.get('lengthscale')
     if lscale is not None:
-        assert isinstance(lscale, list)
-        assert isinstance(lscale[0], list) and isinstance(lscale[1], list)
         lscale = gpytorch.constraints.Interval(torch.tensor(lscale[0]),
                                                torch.tensor(lscale[1]))
     # initialize the kernel
