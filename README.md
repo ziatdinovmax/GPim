@@ -64,11 +64,9 @@ gprutils.plot_inducing_points(hyperparams)
 
 ### Running GPim notebooks in the cloud
 
-
-1. Executable Google Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/examples/notebooks/GP_sparse2Dimages.ipynb) with the example of applying GP to sparse spiral 2D scans in piezoresponse force microscopy (PFM).
-2. Executable Googe Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/examples/notebooks/GP_BEPFM.ipynb) with the example of applying GP to both hyperspectral (3D) data reconstruction and sample exploration based on maximal uncertainty reduction in band excitation scanning probe microscopy (BEPFM).
-3. Executable Google Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/examples/notebooks/GP_TD_cKPFM.ipynb) with the example of applying GP to 4D spectroscopic dataset for smoothing and resolution enhancement in contact Kelvin Probe Force Microscopy (cKPFM)
-
+1) Executable Google Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/examples/notebooks/GP_sparse2Dimages.ipynb) with the example of applying GP to sparse spiral 2D scans in piezoresponse force microscopy (PFM).
+2) Executable Googe Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/examples/notebooks/GP_BEPFM.ipynb) with the example of applying GP to both hyperspectral (3D) data reconstruction and sample exploration based on maximal uncertainty reduction in band excitation scanning probe microscopy (BEPFM).
+3) Executable Google Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/examples/notebooks/GP_TD_cKPFM.ipynb) with the example of applying GP to 4D spectroscopic dataset for smoothing and resolution enhancement in contact Kelvin Probe Force Microscopy (cKPFM)
 
 ### Command line usage
 To perform GP-based reconstruction of sparse 2D image or sparse hyperspectral 3D data (datacube where measurements (spectroscopic curves) are missing for various xy positions), use ```reconstruct.py``` file from the [examples](https://github.com/ziatdinovmax/GPim/tree/master/examples):
@@ -85,17 +83,16 @@ python3 explore.py <path/to/file.npy>
 ```
 Notice that the exploration part currently runs only "synthetic experiments" where you need to provide a full dataset (no missing values) as a ground truth.
 
-
 ## Requirements
 
 It is strongly recommended to run the codes with a GPU hardware accelerator (such as NVIDIA's P100 or V100 GPU). If you don't have a GPU on your local machine, you may rent a cloud GPU from [Google Cloud AI Platform](https://cloud.google.com/deep-learning-vm/). Running the [example notebook](https://colab.research.google.com/github/ziatdinovmax/GP/blob/master/notebooks/GP_BEPFM.ipynb) one time from top to bottom will cost about 1 USD with a standard deep learning VM instance (one P100 GPU and 15 GB of RAM).
 
 ## TODO
 
-1. Add more test modules
+1) Add more test modules
 
-2. Add more utility functions for 4D datasets
+2) Add more utility functions for 4D datasets
 
-3. Add option to run GP on multiple GPUs
+3) Add option to run GP on multiple GPUs
 
-4. Add GP for image registration
+4) Add GP for image registration
