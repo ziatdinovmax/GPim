@@ -36,7 +36,7 @@ R_true = np.load(args.FILEPATH)
 if args.NORMALIZE and np.isnan(R_true).any() is False:
     R_true = (R_true - np.amin(R_true))/np.ptp(R_true)
 # Get "ground truth" grid indices
-X_true = gprutils.get_grid_indices(R_true)
+X_true = gprutils.get_full_grid(R_true, dense_x=1.)
 # Construct lengthscale constraints for all dimensions
 LENGTH_CONSTR = [
                  [float(args.LENGTH_CONSTR_MIN) for i in range(np.ndim(R_true))],
