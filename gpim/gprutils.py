@@ -127,6 +127,9 @@ def do_measurement(R_true, X_true, R, X, uncertmax, measure):
             (as determined by GP regression model)
         measure (int):
             half of measurement square
+    
+    Returns:
+        Updated R and X ndarrays
     """
     a0, a1 = uncertmax
     # make "observation"
@@ -494,9 +497,9 @@ def plot_raw_data(raw_data, slice_number, pos,
             cmap for 2D image ("slice") plot
         **z_vec (1D ndarray):
             spectroscopic measurements values (e.g. frequency, bias)
-        z_vec_label (str):
+        **z_vec_label (str):
             spectroscopic measurements label (e.g. frequency, bias voltage)
-        z_vec_units (str):
+        **z_vec_units (str):
             spectroscopic measurements units (e.g. Hz, V)
     """
     cmap = kwargs.get('cmap', 'magma')
@@ -710,11 +713,11 @@ def plot_exploration_results(R_all, mean_all, sd_all, R_true,
             in predictive mean plots
         **sparsity (float):
             indicates % of data points removed (used only for figure title)
-        z_vec (1D ndarray):
+        **z_vec (1D ndarray):
             spectroscopic measurements values (e.g. frequency, bias)
-        z_vec_label (str):
+        **z_vec_label (str):
             spectroscopic measurements label (e.g. frequency, bias voltage)
-        z_vec_units (str):
+        **z_vec_units (str):
             spectroscopic measurements units (e.g. Hz, V)
     """
 
