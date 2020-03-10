@@ -240,9 +240,10 @@ def get_sparse_grid(R):
     Returns:
         Sparse grid indices
     """
-    assert np.isnan(R).any(),\
-    "Missing values in sparse data must be represented as NaNs"
-    X_true = get_grid_indices(R)
+    if not np.isnan(R).any():
+        raise NotImplementedError(
+            "Missing values in sparse data must be represented as NaNs")
+    X_true = get_full_grid(R)
     if np.ndim(R) == 2:
         e1, e2 = R.shape
         X = X_true.copy().reshape(2, e1*e2)
