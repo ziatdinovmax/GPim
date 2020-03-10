@@ -91,12 +91,10 @@ It is strongly recommended to run the codes with a GPU hardware accelerator (suc
 
 ## TODO
 
-1. Add test modules
+1. Add more test modules
 
 2. Add more utility functions for 4D datasets
 
 3. Add option to run GP on multiple GPUs
 
 4. Add GP for image registration
-
-5. Add docs
