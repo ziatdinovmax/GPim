@@ -202,6 +202,7 @@ def get_grid_indices(R, dense_x=1.):
     if np.ndim(R) > 3:
         raise NotImplementedError(
             "Currently supports only 2D and 3D arrays")
+    dense_x = np.float(dense_x)
     X_full = get_full_grid(R, dense_x)
     X_sparse = get_sparse_grid(R)
     return X_full, X_sparse
@@ -221,6 +222,7 @@ def get_full_grid(R, dense_x=1.):
     Returns:
             Grid indices as numpy array
     """
+    dense_x = np.float(dense_x)
     if np.ndim(R) == 2:
         e1, e2 = R.shape
         c1, c2 = np.mgrid[:e1:dense_x, :e2:dense_x]
