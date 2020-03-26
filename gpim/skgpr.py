@@ -85,11 +85,13 @@ class skreconstructor:
                  num_batches=10,
                  calculate_sd=0,
                  use_gpu=1,
-                 verbose=0):
+                 verbose=0,
+                 seed=0):
         """
         Initiates reconstructor parameters
         and pre-processes training and test data arrays
         """
+        torch.manual_seed(seed)
         input_dim = np.ndim(y)
         X, y = gprutils.prepare_training_data(X, y)
         Xtest = gprutils.prepare_test_data(Xtest)
@@ -98,6 +100,9 @@ class skreconstructor:
         self.maxroot = gpytorch.settings.max_root_decomposition_size(maxroot)
         if use_gpu and torch.cuda.is_available():
             torch.cuda.empty_cache()
+            torch.cuda.manual_seed_all(seed)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
             torch.set_default_tensor_type(torch.cuda.DoubleTensor)
             self.X, self.y = self.X.cuda(), self.y.cuda()
             self.Xtest = self.Xtest.cuda()

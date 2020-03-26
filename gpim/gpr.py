@@ -74,19 +74,26 @@ class reconstructor:
                  iterations=1000,
                  use_gpu=False,
                  verbose=False,
+                 seed=0,
                  **kwargs):
         """
         Initiates reconstructor parameters
         and pre-processes training and test data arrays
         """
-        input_dim = np.ndim(y)
+        torch.manual_seed(seed)
+        pyro.set_rng_seed(seed)
+        pyro.clear_param_store()
         if use_gpu and torch.cuda.is_available():
             torch.cuda.empty_cache()
+            torch.cuda.manual_seed_all(seed)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
             torch.set_default_tensor_type(torch.cuda.DoubleTensor)
             use_gpu = True
         else:
             torch.set_default_tensor_type(torch.DoubleTensor)
             use_gpu = False
+        input_dim = np.ndim(y)
         self.X, self.y = gprutils.prepare_training_data(X, y)
         if indpoints > len(self.X):
             indpoints = len(self.X)
@@ -133,7 +140,6 @@ class reconstructor:
             self.learning_rate = kwargs.get("learning_rate")
         if kwargs.get("iterations") is not None:
             self.iterations = kwargs.get("iterations")
-        pyro.set_rng_seed(0)
         pyro.clear_param_store()
         optimizer = torch.optim.Adam(self.sgpr.parameters(), lr=self.learning_rate)
         loss_fn = pyro.infer.Trace_ELBO().differentiable_loss
