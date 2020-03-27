@@ -95,6 +95,13 @@ class skreconstructor:
         and pre-processes training and test data arrays
         """
         torch.manual_seed(seed)
+        if use_gpu and torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            torch.cuda.manual_seed_all(seed)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            torch.set_default_tensor_type(torch.cuda.DoubleTensor)
+        gpr2sgpr_thresh = 1e4
         input_dim = np.ndim(y)
         X, y = gprutils.prepare_training_data(X, y)
         Xtest = gprutils.prepare_test_data(Xtest)
@@ -102,11 +109,6 @@ class skreconstructor:
         self.toeplitz = gpytorch.settings.use_toeplitz(True)
         self.maxroot = gpytorch.settings.max_root_decomposition_size(maxroot)
         if use_gpu and torch.cuda.is_available():
-            torch.cuda.empty_cache()
-            torch.cuda.manual_seed_all(seed)
-            torch.backends.cudnn.deterministic = True
-            torch.backends.cudnn.benchmark = False
-            torch.set_default_tensor_type(torch.cuda.DoubleTensor)
             self.X, self.y = self.X.cuda(), self.y.cuda()
             if self.Xtest is not None:
                 self.Xtest = self.Xtest.cuda()
@@ -152,9 +154,14 @@ class skreconstructor:
             loss = -mll(output, self.y)
             loss.backward()
             optimizer.step()
-            self.lscales.append(
-                self.model.covar_module.base_kernel.base_kernel.lengthscale.tolist()[0]
-            )
+            if len(self.X) < gpr2sgpr_thresh:
+                self.lscales.append(
+                    self.model.covar_module.base_kernel.lengthscale.tolist()[0]
+                )
+            else:
+                self.lscales.append(
+                    self.model.covar_module.base_kernel.base_kernel.lengthscale.tolist()[0]
+                )
             self.noise_all.append(
                 self.model.likelihood.noise_covar.noise.item())
             if self.verbose and (i % 10 == 0 or i == self.iterations - 1):
@@ -219,9 +226,9 @@ class skreconstructor:
             Xtest_i = self.Xtest[i*batch_range:(i+1)*batch_range]
             with torch.no_grad(), gpytorch.settings.fast_pred_var(), self.toeplitz, self.maxroot:
                 covar_i = self.likelihood(self.model(Xtest_i))
-            mean[i*batch_range:(i+1)*batch_range] = covar_i.mean.cpu().numpy()
+            mean[i*batch_range:(i+1)*batch_range] = covar_i.mean.detach().cpu().numpy()
             if self.calculate_sd:
-                sd[i*batch_range:(i+1)*batch_range] = covar_i.stddev.cpu().numpy()
+                sd[i*batch_range:(i+1)*batch_range] = covar_i.stddev.detach().cpu().numpy()
         print("\nDone")
         if self.calculate_sd:
             return (mean, sd)
@@ -271,12 +278,13 @@ class skgprmodel(gpytorch.models.ExactGP):
         Initializes model parameters
         """
         super(skgprmodel, self).__init__(X, y, likelihood)
-        grid_size = gpytorch.utils.grid.choose_grid_size(
-            X, ratio=grid_points_ratio)
         self.mean_module = gpytorch.means.ConstantMean()
-        scaled_kernel = gpytorch.kernels.ScaleKernel(kernel)
-        self.covar_module = gpytorch.kernels.GridInterpolationKernel(
-            scaled_kernel, grid_size=grid_size, num_dims=input_dim)
+        self.covar_module = gpytorch.kernels.ScaleKernel(kernel)
+        if len(self.X) > gpr2sgpr_thresh:
+            grid_size = gpytorch.utils.grid.choose_grid_size(
+                X, ratio=grid_points_ratio)
+            self.covar_module = gpytorch.kernels.GridInterpolationKernel(
+                self.covar_module, grid_size=grid_size, num_dims=input_dim)
 
     def forward(self, x):
         """
