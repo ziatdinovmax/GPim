@@ -274,7 +274,7 @@ class skgprmodel(gpytorch.models.ExactGP):
 
     def __init__(self, X, y, kernel, likelihood,
                  input_dim=3, grid_points_ratio=1.,
-                 gpr2sgpr_thresh):
+                 gpr2sgpr_thresh=5000):
         """
         Initializes model parameters
         """
