@@ -69,7 +69,7 @@ class reconstructor:
                  Xtest=None,
                  kernel='RBF',
                  lengthscale=None,
-                 indpoints=1000,
+                 indpoints=None,
                  learning_rate=5e-2,
                  iterations=1000,
                  use_gpu=False,
@@ -95,9 +95,6 @@ class reconstructor:
             use_gpu = False
         input_dim = np.ndim(y)
         self.X, self.y = gprutils.prepare_training_data(X, y)
-        if indpoints > len(self.X):
-            indpoints = len(self.X)
-        Xu = self.X[::len(self.X) // indpoints]
         if lengthscale is None:
             lengthscale = [[0. for l in range(input_dim)],
                            [np.mean(y.shape) / 2 for l in range(input_dim)]]
@@ -117,11 +114,20 @@ class reconstructor:
             self.y = self.y.cuda()
             if self.Xtest is not None:
                 self.Xtest = self.Xtest.cuda()
-        self.sgpr = gp.models.SparseGPRegression(
-            self.X, self.y, kernel, Xu, jitter=1.0e-5)
-        print("# of inducing points for GP regression: {}".format(len(Xu)))
+        if len(self.X) < 1000:
+            self.model = gp.models.GPRegression(self.X,  self.y, kernel)
+        else:
+            if indpoints is None:
+                indpoints = len(X) // 10
+                indpoints = indpoints + 1 if indpoints == 0 else indpoints
+            else:
+                indpoints = len(self.X) if indpoints > len(self.X) else indpoints
+            Xu = self.X[::len(self.X) // indpoints]
+            print("# of inducing points for sparse GP regression: {}".format(len(Xu)))
+            self.model = gp.models.SparseGPRegression(
+                self.X, self.y, kernel, Xu, jitter=1.0e-5)
         if use_gpu:
-            self.sgpr.cuda()
+            self.model.cuda()
         self.learning_rate = learning_rate
         self.iterations = iterations
         self.hyperparams = {}
@@ -132,7 +138,7 @@ class reconstructor:
             "noise": self.noise_all,
             "variance": self.amp_all,
             "inducing_points": self.indpoints_all
-        }
+            }
         self.verbose = verbose
 
     def train(self, **kwargs):
@@ -148,19 +154,20 @@ class reconstructor:
         if kwargs.get("iterations") is not None:
             self.iterations = kwargs.get("iterations")
         pyro.clear_param_store()
-        optimizer = torch.optim.Adam(self.sgpr.parameters(), lr=self.learning_rate)
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
         loss_fn = pyro.infer.Trace_ELBO().differentiable_loss
         start_time = time.time()
         print('Model training...')
         for i in range(self.iterations):
             optimizer.zero_grad()
-            loss = loss_fn(self.sgpr.model, self.sgpr.guide)
+            loss = loss_fn(self.model.model, self.model.guide)
             loss.backward()
             optimizer.step()
-            self.lscales.append(self.sgpr.kernel.lengthscale_map.tolist())
-            self.amp_all.append(self.sgpr.kernel.variance_map.item())
-            self.noise_all.append(self.sgpr.noise.item())
-            self.indpoints_all.append(self.sgpr.Xu.detach().cpu().numpy())
+            self.lscales.append(self.model.kernel.lengthscale_map.tolist())
+            self.amp_all.append(self.model.kernel.variance_map.item())
+            self.noise_all.append(self.model.noise.item())
+            if len(self.X) < 1000:
+                self.indpoints_all.append(self.model.Xu.detach().cpu().numpy())
             if self.verbose and (i % 100 == 0 or i == self.iterations - 1):
                 print('iter: {} ...'.format(i),
                       'loss: {} ...'.format(np.around(loss.item(), 4)),
@@ -174,9 +181,9 @@ class reconstructor:
             np.round(time.time() - start_time, 2)))
         print('Final parameter values:\n',
               'amp: {}, lengthscale: {}, noise: {}'.format(
-                np.around(self.sgpr.kernel.variance_map.item(), 4),
-                np.around(self.sgpr.kernel.lengthscale_map.tolist(), 4),
-                np.around(self.sgpr.noise.item(), 7)))
+                np.around(self.model.kernel.variance_map.item(), 4),
+                np.around(self.model.kernel.lengthscale_map.tolist(), 4),
+                np.around(self.model.noise.item(), 7)))
         return
 
     def predict(self, Xtest=None):
@@ -200,11 +207,11 @@ class reconstructor:
         elif Xtest is not None:
             self.Xtest = gprutils.prepare_test_data(Xtest)
             self.fulldims = Xtest.shape[1:]
-            if next(self.sgpr.parameters()).is_cuda:
+            if next(self.model.parameters()).is_cuda:
                 self.Xtest = self.Xtest.cuda()
         print("Calculating predictive mean and variance...", end=" ")
         with torch.no_grad():
-            mean, cov = self.sgpr(self.Xtest, full_cov=False, noiseless=False)
+            mean, cov = self.model(self.Xtest, full_cov=False, noiseless=False)
         print("Done")
         return mean.cpu().numpy(), cov.sqrt().cpu().numpy()
 
@@ -230,8 +237,8 @@ class reconstructor:
             self.iterations = kwargs.get("iterations")
         self.train(learning_rate=self.learning_rate, iterations=self.iterations)
         mean, sd = self.predict()
-        if next(self.sgpr.parameters()).is_cuda:
-            self.sgpr.cpu()
+        if next(self.model.parameters()).is_cuda:
+            self.model.cpu()
             torch.set_default_tensor_type(torch.DoubleTensor)
             self.X, self.y = self.X.cpu(), self.y.cpu()
             self.Xtest = self.Xtest.cpu()
