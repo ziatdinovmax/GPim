@@ -77,7 +77,6 @@ class skreconstructor:
                  Xtest=None,
                  kernel='RBF',
                  lengthscale=None,
-                 lengthscale_init=None,
                  iterations=50,
                  learning_rate=.1,
                  grid_points_ratio=1.,
@@ -116,8 +115,7 @@ class skreconstructor:
             torch.set_default_tensor_type(torch.DoubleTensor)
         self.likelihood = gpytorch.likelihoods.GaussianLikelihood()
         _kernel = get_kernel(kernel, input_dim,
-                             use_gpu, lengthscale=lengthscale,
-                             lengthscale_init=lengthscale_init)
+                             use_gpu, lengthscale=lengthscale,)
         self.model = skgprmodel(self.X, self.y,
                                 _kernel, self.likelihood, input_dim,
                                 grid_points_ratio, self.do_ski)
@@ -346,8 +344,6 @@ def get_kernel(kernel_type, input_dim, on_gpu=True, **kwargs):
             Determines lower (1st list) and upper (2nd list) bounds
             for kernel lengthscale(s);
             number of elements in each list is equal to the input dimensions
-        **lengthscale_init (list with float):
-            Initializes lenghtscale at this value
     Returns:
         kernel object
     """
@@ -377,7 +373,4 @@ def get_kernel(kernel_type, input_dim, on_gpu=True, **kwargs):
         print('Select one of the currently available kernels:',\
               '"RBF", "Matern52"')
         raise
-    lscale_init = kwargs.get('lengthscale_init')
-    if None not in (lscale, lscale_init):
-        kernel.lengthscale = torch.tensor(lscale_init)
     return kernel
