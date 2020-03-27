@@ -66,8 +66,8 @@ class reconstructor:
     def __init__(self,
                  X,
                  y,
-                 Xtest,
-                 kernel,
+                 Xtest=None,
+                 kernel='RBF',
                  lengthscale=None,
                  indpoints=1000,
                  learning_rate=5e-2,
@@ -104,12 +104,19 @@ class reconstructor:
         kernel = get_kernel(kernel, input_dim,
                             lengthscale, use_gpu,
                             amplitude=kwargs.get('amplitude'))
-        self.fulldims = Xtest.shape[1:]
-        self.Xtest = gprutils.prepare_test_data(Xtest)
+        if Xtest is not None:
+            self.fulldims = Xtest.shape[1:]
+        else:
+            self.fulldims = X.shape[1:]
+        if Xtest is not None:
+            self.Xtest = gprutils.prepare_test_data(Xtest)
+        else:
+            self.Xtest = Xtest
         if use_gpu:
             self.X = self.X.cuda()
             self.y = self.y.cuda()
-            self.Xtest = self.Xtest.cuda()
+            if self.Xtest is not None:
+                self.Xtest = self.Xtest.cuda()
         self.sgpr = gp.models.SparseGPRegression(
             self.X, self.y, kernel, Xu, jitter=1.0e-5)
         print("# of inducing points for GP regression: {}".format(len(Xu)))
@@ -172,20 +179,27 @@ class reconstructor:
                 np.around(self.sgpr.noise.item(), 7)))
         return
 
-    def predict(self, **kwargs):
+    def predict(self, Xtest=None):
         """
         Use trained GP regression model to make predictions
 
         Args:
-            **Xtest (ndarray):
+            Xtest (ndarray):
             "Test" points (for prediction with a trained GP model)
-            with dimensions :math:`N \\times M` or :math:`N \\times M \\times L`
+            with dimensions :math:`N \\times M` or :math:`N \\times M \\times L`.
+            Uses the Xtest from __init__ by default.
 
         Returns:
             Predictive mean and variance
         """
-        if kwargs.get("Xtest") is not None:
-            self.Xtest = gprutils.prepare_test_data(kwargs.get("Xtest"))
+        if Xtest is None and self.Xtest is None:
+            warnings.warn(
+                "No test data provided. Using training data for prediction", 
+                UserWarning)
+            self.Xtest = self.X
+        elif Xtest is not None:
+            self.Xtest = gprutils.prepare_test_data(Xtest)
+            self.fulldims = Xtest.shape[1:]
             if next(self.sgpr.parameters()).is_cuda:
                 self.Xtest = self.Xtest.cuda()
         print("Calculating predictive mean and variance...", end=" ")

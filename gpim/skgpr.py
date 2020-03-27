@@ -16,6 +16,7 @@ import numpy as np
 from gpim import gprutils
 import torch
 import gpytorch
+import warnings
 
 
 class skreconstructor:
@@ -74,8 +75,8 @@ class skreconstructor:
     def __init__(self,
                  X,
                  y,
-                 Xtest,
-                 kernel='Matern52',
+                 Xtest=None,
+                 kernel='RBF',
                  lengthscale=None,
                  lengthscale_init=None,
                  iterations=50,
@@ -105,7 +106,8 @@ class skreconstructor:
             torch.backends.cudnn.benchmark = False
             torch.set_default_tensor_type(torch.cuda.DoubleTensor)
             self.X, self.y = self.X.cuda(), self.y.cuda()
-            self.Xtest = self.Xtest.cuda()
+            if self.Xtest is not None:
+                self.Xtest = self.Xtest.cuda()
             self.toeplitz = gpytorch.settings.use_toeplitz(False)
         else:
             torch.set_default_tensor_type(torch.DoubleTensor)
@@ -169,12 +171,31 @@ class skreconstructor:
                 np.around(self.noise_all[-1], 7)))
         return
 
-    def predict(self, **kwargs):
+    def predict(self, Xtest=None, **kwargs):
         """
         Makes a prediction with trained GP regression model
+
+        Args:
+            Xtest (ndarray):
+            "Test" points (for prediction with a trained GP model)
+            with dimension :math:`N \\times M`, :math:`N \\times M \\times L`
+            or :math:`N \\times M \\times L \\times K`
+        max_root (int):
+            Maximum number of Lanczos iterations to perform
+            in prediction stage
+        num_batches (int):
+            Number of batches for splitting the Xtest array
+            (for large datasets, you may not have enough GPU memory
+            to process the entire dataset at once)
         """
-        if kwargs.get("Xtest") is not None:
-            self.Xtest = gprutils.prepare_test_data(kwargs.get("Xtest"))
+        if Xtest is None and self.Xtest is None:
+            warnings.warn(
+                "No test data provided. Using training data for prediction", 
+                UserWarning)
+            self.Xtest = self.X
+        elif Xtest is not None:
+            self.Xtest = gprutils.prepare_test_data(Xtest)
+            self.fulldims = Xtest.shape[1:]
             if next(self.model.parameters()).is_cuda:
                 self.Xtest = self.Xtest.cuda()
         if kwargs.get("num_batches") is not None:
