@@ -25,7 +25,7 @@ if __name__ == "__main__":
         zip_safe=False,
         install_requires=[
             'numpy>=1.16.5',
-            'matplotlib>=3.1.1',
+            'matplotlib==3.1.1',
             'torch>=1.3.1',
             'pyro-ppl>=0.4.1',
             'gpytorch>=0.3.6',
