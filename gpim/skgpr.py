@@ -97,11 +97,14 @@ class skreconstructor:
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
             torch.set_default_tensor_type(torch.cuda.DoubleTensor)
-        self.gpr2sgpr_thresh = 1e4
         input_dim = np.ndim(y)
         X, y = gprutils.prepare_training_data(X, y)
-        Xtest = gprutils.prepare_test_data(Xtest)
+        if Xtest is not None:
+            Xtest = gprutils.prepare_test_data(Xtest)
         self.X, self.y, self.Xtest = X, y, Xtest
+        self.do_ski = False
+        if self.X.shape[-1] < 3 and len(self.X) >= 5e3:
+            self.do_ski = True
         self.toeplitz = gpytorch.settings.use_toeplitz(True)
         self.maxroot = gpytorch.settings.max_root_decomposition_size(maxroot)
         if use_gpu and torch.cuda.is_available():
@@ -117,7 +120,7 @@ class skreconstructor:
                              lengthscale_init=lengthscale_init)
         self.model = skgprmodel(self.X, self.y,
                                 _kernel, self.likelihood, input_dim,
-                                grid_points_ratio, self.gpr2sgpr_thresh)
+                                grid_points_ratio, self.do_ski)
         if use_gpu:
             self.model.cuda()
         self.iterations = iterations
@@ -157,7 +160,7 @@ class skreconstructor:
             loss = -mll(output, self.y)
             loss.backward()
             optimizer.step()
-            if len(self.X) < self.gpr2sgpr_thresh:
+            if not self.do_ski:
                 self.lscales.append(
                     self.model.covar_module.base_kernel.lengthscale.tolist()[0]
                 )
@@ -218,12 +221,8 @@ class skreconstructor:
         self.likelihood.eval()
         batch_range = len(self.Xtest) // self.num_batches
         mean = np.zeros((self.Xtest.shape[0]))
-        if self.calculate_sd:
-            sd = np.zeros((self.Xtest.shape[0]))
-        if self.calculate_sd:
-            print('Calculating predictive mean and uncertainty...')
-        else:
-            print('Calculating predictive mean...')
+        sd = np.zeros((self.Xtest.shape[0]))
+        print('Calculating predictive mean and uncertainty...')
         for i in range(self.num_batches):
             print("\rBatch {}/{}".format(i+1, self.num_batches), end="")
             Xtest_i = self.Xtest[i*batch_range:(i+1)*batch_range]
@@ -239,14 +238,14 @@ class skreconstructor:
         Combines train and step methods
         """
         self.train()
-        prediction = self.predict()
+        mean, sd = self.predict()
         if next(self.model.parameters()).is_cuda:
             self.model.cpu()
             torch.set_default_tensor_type(torch.DoubleTensor)
             self.X, self.y = self.X.cpu(), self.y.cpu()
             self.Xtest = self.Xtest.cpu()
             torch.cuda.empty_cache()
-        return prediction, self.hyperparams
+        return mean, sd, self.hyperparams
 
     def step(self, dist_edge=0, **kwargs):
         """
@@ -309,14 +308,14 @@ class skgprmodel(gpytorch.models.ExactGP):
 
     def __init__(self, X, y, kernel, likelihood,
                  input_dim=3, grid_points_ratio=1.,
-                 gpr2sgpr_thresh=5000):
+                 do_ski=False):
         """
         Initializes model parameters
         """
         super(skgprmodel, self).__init__(X, y, likelihood)
         self.mean_module = gpytorch.means.ConstantMean()
         self.covar_module = gpytorch.kernels.ScaleKernel(kernel)
-        if len(X) > gpr2sgpr_thresh:
+        if do_ski:
             grid_size = gpytorch.utils.grid.choose_grid_size(
                 X, ratio=grid_points_ratio)
             self.covar_module = gpytorch.kernels.GridInterpolationKernel(
