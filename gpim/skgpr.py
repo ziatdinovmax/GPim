@@ -281,7 +281,7 @@ class skgprmodel(gpytorch.models.ExactGP):
         super(skgprmodel, self).__init__(X, y, likelihood)
         self.mean_module = gpytorch.means.ConstantMean()
         self.covar_module = gpytorch.kernels.ScaleKernel(kernel)
-        if len(self.X) > gpr2sgpr_thresh:
+        if len(X) > gpr2sgpr_thresh:
             grid_size = gpytorch.utils.grid.choose_grid_size(
                 X, ratio=grid_points_ratio)
             self.covar_module = gpytorch.kernels.GridInterpolationKernel(
