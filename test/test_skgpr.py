@@ -14,15 +14,15 @@ test_data3d = os.path.join(
 
 
 @pytest.mark.parametrize('kernel', ['RBF', 'Matern52'])
-def test_skgpr_2d(kernel):
+def test_skgpr_2d(kernel):  # sanity check only, due to comput cost
     R = np.load(test_data)
     X = gprutils.get_sparse_grid(R)
     X_true = gprutils.get_full_grid(R)
-    (mean, sd), _ = skgpr.skreconstructor(
+    mean, sd, _ = skgpr.skreconstructor(
         X, R, X_true, kernel=kernel,
         learning_rate=0.1, iterations=2,
-        calculate_sd=True, num_batches=1,
-        use_gpu=False, verbose=False).run()
+        num_batches=1, use_gpu=False,
+        verbose=False).run()
     assert_(mean.shape == sd.shape == R.flatten().shape)
     assert_(not np.isnan(mean).any())
     assert_(not np.isnan(sd).any())
@@ -33,12 +33,11 @@ def test_skgpr_3d(kernel):  # sanity check only, due to comput cost
     R = np.load(test_data3d)
     X = gprutils.get_sparse_grid(R)
     X_true = gprutils.get_full_grid(R)
-    (mean, sd), _ = skgpr.skreconstructor(
+    mean, sd, _ = skgpr.skreconstructor(
         X, R, X_true, kernel=kernel,
         learning_rate=0.1, iterations=2,
-        num_batches=100, calculate_sd=True,
-        use_gpu=False, verbose=True).run()
+        num_batches=100, use_gpu=False,
+        verbose=True).run()
     assert_(mean.shape == sd.shape == R.flatten().shape)
     assert_(not np.isnan(mean).any())
     assert_(not np.isnan(sd).any())
-

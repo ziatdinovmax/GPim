@@ -13,7 +13,7 @@ test_data3d = os.path.join(
 
 
 @pytest.mark.parametrize('kernel', ['RBF', 'Matern52'])
-def test_gpr_2d(kernel):
+def test_gpr_2d(kernel):  # sanity check only, due to comput cost
     R = np.load(test_data2d)
     X = gprutils.get_sparse_grid(R)
     X_true = gprutils.get_full_grid(R)
