@@ -40,30 +40,31 @@ pip install git+https://github.com/ziatdinovmax/GPim.git
 Below is a simple example of applying GPim to reconstructing a sparse 2D image. It can be similarly applied to 3D and 4D hyperspectral data. The missing data points in sparse data must be represented as [NaNs](https://docs.scipy.org/doc/numpy/reference/constants.html?highlight=numpy%20nan#numpy.nan). In the absense of missing observation GPim can be used for image and spectroscopic data cleaning/smoothing in all the dimensions simultaneously, as well as for the resolution enhancement. Finally, when performing measurements, one can use the information about uncertainty in GP reconstruction to select the next measurement point (more details in the notebooks referenced below).
 
 ```python
-from gpim import gpr, gprutils
+import gpim
+from gpim import gprutils
 import numpy as np
 
 # # Load dataset
 R = np.load('sparse_exp_data.npy') 
 
-# Get full grid indices
-X_true = gprutils.get_full_grid(R, dense_x=1)
+# Get full (ideal) grid indices
+X_full = gprutils.get_full_grid(R, dense_x=1)
 # Get sparse grid indices
-X = gprutils.get_sparse_grid(R)
+X_sparse = gprutils.get_sparse_grid(R)
 # Kernel lengthscale constraints (optional)
-lengthscale = [[1., 1.], [4., 4.]] 
+lmin, lmax = 1., 4.
+lscale = [[lmin, lmin], [lmax, lmax]] 
 
 # Run GP reconstruction to obtain mean prediction and uncertainty for each predictied point
-mean, sd, hyperparams = gpr.reconstructor(
-    X, R, X_true, kernel='RBF', lengthscale=lengthscale,
-    indpoints=200, learning_rate=0.1, iterations=250, 
+mean, sd, hyperparams = gpim.reconstructor(
+    X_sparse, R, X_full, lengthscale=lscale,
+    learning_rate=0.1, iterations=250, 
     use_gpu=True, verbose=False).run()
 
 # Plot reconstruction results
 gprutils.plot_reconstructed_data2d(R, mean, cmap='jet')
 # Plot evolution of kernel hyperparameters during training
 gprutils.plot_kernel_hyperparams(hyperparams)
-gprutils.plot_inducing_points(hyperparams)
 ```
 
 ### Running GPim notebooks in the cloud
