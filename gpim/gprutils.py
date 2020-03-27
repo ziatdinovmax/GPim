@@ -112,17 +112,13 @@ def do_measurement(R_true, X_true, R, X, uncertmax, measure):
 
     Args:
         R_true (ndarray):
-            Datacube with full observations ('ground truth');
-            dimensions are :math:`N \\times M \\times L`
+            Full observations ('ground truth');
         X_true (ndarray):
             Grid indices for full observation;
-            dimensions are :math: `N \\times M \\times L \\times 3`
         R (ndarray):
-            Datacube with partial observations (missing values are NaNs);
-            dimensions are :math:`N \\times M \\times L`.
+            Partial observations (missing values are NaNs);
         X (ndarray):
             Grid indices for partial observations (missing points are NaNs)
-            dimensions are :math: `N \\times M \\times L \\times 3`
         uncertmax (list):
             indices of point with maximum uncertainty
             (as determined by GP regression model)
