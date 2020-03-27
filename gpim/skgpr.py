@@ -71,6 +71,8 @@ class skreconstructor:
             Uses GPU hardware accelerator when set to 'True'
         verbose (bool):
             Print statistics after each training iteration
+        seed (int):
+            for reproducibility
     """
     def __init__(self,
                  X,
@@ -190,7 +192,7 @@ class skreconstructor:
         """
         if Xtest is None and self.Xtest is None:
             warnings.warn(
-                "No test data provided. Using training data for prediction", 
+                "No test data provided. Using training data for prediction",
                 UserWarning)
             self.Xtest = self.X
         elif Xtest is not None:

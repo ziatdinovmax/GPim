@@ -24,10 +24,11 @@ import warnings
 
 class reconstructor:
     """
-    Class for Gaussian process regression-based reconstuction
+    Class for Gaussian process (GP) regression-based reconstuction
     of sparse 2D image and 3D spectroscopic datasets,
-    and sample exploration with hyperspectral measurements
-    based on maximal uncertainty reduction.
+    and system exploration based on maximal uncertainty reduction.
+    Performs full GP regresion if a total number of training points
+    is less than 1000. Otherwise, performs a sparse GP regression.
 
     Args:
         X (ndarray):
@@ -46,10 +47,12 @@ class reconstructor:
             with dimensions :math:`N \\times M` or :math:`N \\times M \\times L`
         kernel (str):
             Kernel type ('RBF', 'Matern52', 'RationalQuadratic')
-        lengthscale (list of two lists):
-            Determines lower (1st list) and upper (2nd list) bounds
-            for kernel lengthscales. The number of elements in each list
-            is equal to the dataset dimensionality.
+        lengthscale (list of int or list of two lists with int):
+            Determines lower (1st value or 1st list) and upper (2nd value or 2nd list)
+            bounds for kernel lengthscales. For list with two integers,
+            the kernel will have only one lenghtscale, even if the dataset
+            is multi-dimensional. For lists of two lists, the number of elements
+            in each list must be equal to the dataset dimensionality.
         indpoints (int):
             Number of inducing points for SparseGPRegression
         learning_rate (float):
@@ -61,6 +64,8 @@ class reconstructor:
             is extremely slow.
         verbose (bool):
             Prints training statistics after each 100th training iteration
+        seed (int):
+            for reproducibility
         **amplitude (float): kernel variance or amplitude squared
     """
     def __init__(self,
@@ -143,7 +148,7 @@ class reconstructor:
 
     def train(self, **kwargs):
         """
-        Training sparse GP regression model
+        Training GP regression model
 
         Args:
             **learning_rate (float): learning rate
@@ -194,14 +199,15 @@ class reconstructor:
             Xtest (ndarray):
             "Test" points (for prediction with a trained GP model)
             with dimensions :math:`N \\times M` or :math:`N \\times M \\times L`.
-            Uses the Xtest from __init__ by default.
+            Uses Xtest from __init__ by default. If Xtest is None,
+            uses training data X.
 
         Returns:
             Predictive mean and variance
         """
         if Xtest is None and self.Xtest is None:
             warnings.warn(
-                "No test data provided. Using training data for prediction", 
+                "No test data provided. Using training data for prediction",
                 UserWarning)
             self.Xtest = self.X
         elif Xtest is not None:

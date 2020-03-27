@@ -124,7 +124,7 @@ def do_measurement(R_true, X_true, R, X, uncertmax, measure):
             (as determined by GP regression model)
         measure (int):
             half of measurement square
-    
+
     Returns:
         Updated R and X ndarrays
     """
