@@ -172,13 +172,22 @@ class reconstructor:
                 np.around(self.sgpr.noise.item(), 7)))
         return
 
-    def predict(self):
+    def predict(self, **kwargs):
         """
         Use trained GP regression model to make predictions
+
+        Args:
+            **Xtest (ndarray):
+            "Test" points (for prediction with a trained GP model)
+            with dimensions :math:`N \\times M` or :math:`N \\times M \\times L`
 
         Returns:
             Predictive mean and variance
         """
+        if kwargs.get("Xtest") is not None:
+            self.Xtest = gprutils.prepare_test_data(kwargs.get("Xtest"))
+            if next(self.sgpr.parameters()).is_cuda:
+                self.Xtest = self.Xtest.cuda()
         print("Calculating predictive mean and variance...", end=" ")
         with torch.no_grad():
             mean, cov = self.sgpr(self.Xtest, full_cov=False, noiseless=False)
