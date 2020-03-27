@@ -64,9 +64,6 @@ class skreconstructor:
             Number of batches for splitting the Xtest array
             (for large datasets, you may not have enough GPU memory
             to process the entire dataset at once)
-        calculate_sd (bool):
-            Calculates SD in prediction stage
-            (possible only when num_batches == 1)
         use_gpu (bool):
             Uses GPU hardware accelerator when set to 'True'
         verbose (bool):
@@ -85,8 +82,7 @@ class skreconstructor:
                  learning_rate=.1,
                  grid_points_ratio=1.,
                  maxroot=100,
-                 num_batches=10,
-                 calculate_sd=0,
+                 num_batches=1,
                  use_gpu=1,
                  verbose=0,
                  seed=0):
@@ -126,8 +122,7 @@ class skreconstructor:
             self.model.cuda()
         self.iterations = iterations
         self.num_batches = num_batches
-        self.calculate_sd = calculate_sd
-        self.lr = learning_rate
+        self.learning_rate = learning_rate
 
         self.lscales, self.noise_all = [], []
         self.hyperparams = {
@@ -136,14 +131,22 @@ class skreconstructor:
         }
         self.verbose = verbose
 
-    def train(self):
+    def train(self, **kwargs):
         """
-        Trains GP regression model with structured kernel interpolation
+        Training GP regression model
+
+        Args:
+            **learning_rate (float): learning rate
+            **iterations (int): number of SVI training iteratons
         """
+        if kwargs.get("learning_rate") is not None:
+            self.learning_rate = kwargs.get("learning_rate")
+        if kwargs.get("iterations") is not None:
+            self.iterations = kwargs.get("iterations")
         self.model.train()
         self.likelihood.train()
         optimizer = torch.optim.Adam(
-            [{'params': self.model.parameters()}], lr=self.lr)
+            [{'params': self.model.parameters()}], lr=self.learning_rate)
         mll = gpytorch.mlls.ExactMarginalLogLikelihood(
             self.likelihood, self.model)
         print('Model training...')
@@ -227,12 +230,9 @@ class skreconstructor:
             with torch.no_grad(), gpytorch.settings.fast_pred_var(), self.toeplitz, self.maxroot:
                 covar_i = self.likelihood(self.model(Xtest_i))
             mean[i*batch_range:(i+1)*batch_range] = covar_i.mean.detach().cpu().numpy()
-            if self.calculate_sd:
-                sd[i*batch_range:(i+1)*batch_range] = covar_i.stddev.detach().cpu().numpy()
+            sd[i*batch_range:(i+1)*batch_range] = covar_i.stddev.detach().cpu().numpy()
         print("\nDone")
-        if self.calculate_sd:
-            return (mean, sd)
-        return mean
+        return mean, sd
 
     def run(self):
         """
@@ -247,6 +247,41 @@ class skreconstructor:
             self.Xtest = self.Xtest.cpu()
             torch.cuda.empty_cache()
         return prediction, self.hyperparams
+
+    def step(self, dist_edge=0, **kwargs):
+        """
+        Performs single train-predict step for exploration analysis
+        returning a new point with maximum uncertainty. Notice that
+        it doesn't seem to work properly with structred kernel interpolation
+        and therefore it may work only for when total number of data points
+        is below 5e4 (in this case we use a full GP without structured kernel)
+
+        Args:
+            dist_edge (integer or list with two integers):
+                edge regions not considered in max uncertainty evaluation
+            **learning_rate (float):
+                learning rate for GP regression model training
+            **steps (int):
+                number of SVI training iteratons
+
+        Returns:
+            lists of indices and values for points with maximum uncertainty,
+            predictive mean and standard deviation (as flattened numpy arrays)
+        """
+        if kwargs.get("learning_rate") is not None:
+            self.learning_rate = kwargs.get("learning_rate")
+        if kwargs.get("iterations") is not None:
+            self.iterations = kwargs.get("iterations")
+        if isinstance(dist_edge, int):
+            dist_edge = [dist_edge, dist_edge]
+        # train a model
+        self.train(learning_rate=self.learning_rate, iterations=self.iterations)
+        # make prediction
+        mean, sd = self.predict()
+        # find point with maximum uncertainty
+        sd_ = sd.reshape(self.fulldims)
+        amax, uncert_list = gprutils.max_uncertainty(sd_, dist_edge)
+        return amax, uncert_list, mean, sd
 
 
 class skgprmodel(gpytorch.models.ExactGP):
