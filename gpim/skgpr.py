@@ -45,12 +45,10 @@ class skreconstructor:
             or :math:`N \\times M \\times L \\times K`
         kernel (str):
             Kernel type ('RBF' or 'Matern52')
-        lengthscale (list of two lists):
+        lengthscale (list of int  list of two list with ins):
             Determines lower (1st list) and upper (2nd list) bounds
             for kernel lengthscales. The number of elements in each list
             is equal to the dataset dimensionality.
-        lengthscale_init (list with floats):
-            Initializes lenghtscales at this values
         iterations (int):
             Number of training steps
         learning_rate (float):
