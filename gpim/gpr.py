@@ -166,7 +166,7 @@ class reconstructor:
             self.lscales.append(self.model.kernel.lengthscale_map.tolist())
             self.amp_all.append(self.model.kernel.variance_map.item())
             self.noise_all.append(self.model.noise.item())
-            if len(self.X) < 1000:
+            if len(self.X) > 1000:
                 self.indpoints_all.append(self.model.Xu.detach().cpu().numpy())
             if self.verbose and (i % 100 == 0 or i == self.iterations - 1):
                 print('iter: {} ...'.format(i),
@@ -245,13 +245,13 @@ class reconstructor:
             torch.cuda.empty_cache()
         return mean, sd, self.hyperparams
 
-    def step(self, dist_edge, **kwargs):
+    def step(self, dist_edge=0, **kwargs):
         """
         Performs single train-predict step for exploration analysis
         returning a new point with maximum uncertainty
 
         Args:
-            dist_edge (list with two integers):
+            dist_edge (integer or list with two integers):
                 edge regions not considered in max uncertainty evaluation
             **learning_rate (float):
                 learning rate for GP regression model training
@@ -266,12 +266,14 @@ class reconstructor:
             self.learning_rate = kwargs.get("learning_rate")
         if kwargs.get("iterations") is not None:
             self.iterations = kwargs.get("iterations")
+        if isinstance(dist_edge, int):
+            dist_edge = [dist_edge, dist_edge]
         # train a model
         self.train(learning_rate=self.learning_rate, iterations=self.iterations)
         # make prediction
         mean, sd = self.predict()
         # find point with maximum uncertainty
-        sd_ = sd.reshape(self.fulldims[0], self.fulldims[1], self.fulldims[2])
+        sd_ = sd.reshape(self.fulldims)
         amax, uncert_list = gprutils.max_uncertainty(sd_, dist_edge)
         return amax, uncert_list, mean, sd
 

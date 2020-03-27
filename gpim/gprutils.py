@@ -37,7 +37,8 @@ def max_uncertainty(sd, dist_edge):
         to the first 100 uncertainty points
     """
     # sum along the last dimension
-    sd = np.sum(sd, axis=-1)
+    if np.ndim(sd) == 3:
+        sd = np.sum(sd, axis=-1)
     # mask the edges
     sd = mask_edges(sd, dist_edge)
     # find first 100 points with the largest uncertainty
@@ -133,11 +134,11 @@ def do_measurement(R_true, X_true, R, X, uncertmax, measure):
     """
     a0, a1 = uncertmax
     # make "observation"
-    R_obs = R_true[a0-measure:a0+measure+1, a1-measure:a1+measure+1, :]
-    X_obs = X_true[:, a0-measure:a0+measure+1, a1-measure:a1+measure+1, :]
+    R_obs = R_true[a0-measure:a0+measure+1, a1-measure:a1+measure+1]
+    X_obs = X_true[:, a0-measure:a0+measure+1, a1-measure:a1+measure+1]
     # update the input
-    R[a0-measure:a0+measure+1, a1-measure:a1+measure+1, :] = R_obs
-    X[:, a0-measure:a0+measure+1, a1-measure:a1+measure+1, :] = X_obs
+    R[a0-measure:a0+measure+1, a1-measure:a1+measure+1] = R_obs
+    X[:, a0-measure:a0+measure+1, a1-measure:a1+measure+1] = X_obs
     return R, X
 
 
