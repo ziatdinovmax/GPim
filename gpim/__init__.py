@@ -1,3 +1,3 @@
 from gpim import gpr, skgpr, gprutils
-from gpr import reconstructor
-from skgpr import skreconstructor
+from gpim.gpr import reconstructor
+from gpim.skgpr import skreconstructor
