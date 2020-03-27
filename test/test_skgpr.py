@@ -1,9 +1,9 @@
-import os
 import numpy as np
 import pytest
-from skimage.metrics import structural_similarity as ssim
 from numpy.testing import assert_
 from gpim import skgpr, gprutils
+np.random.seed(0)
+
 
 def get_dummy_data():
     h = 5
