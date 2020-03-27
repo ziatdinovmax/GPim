@@ -426,20 +426,20 @@ def open_edge_points(R, R_true, s=6):
 
     Args:
         R (ndarray):
-            empty/sparse hyperspectral datacube
+            empty/sparse data
         R_true (ndarray):
-            hyperspectral datacube with "ground truth"
+            "ground truth"
         s (int):
             step value, which determines the density of opened edge points
 
     Returns:
         3D ndarray with opened edge points
     """
-    e1, e2, _ = R_true.shape
-    R[0, ::s, :] = R_true[0, ::s, :]
-    R[::s, 0, :] = R_true[::s, 0, :]
-    R[e1-1, s:e2-s:s, :] = R_true[e1-1, s:e2-s:s, :]
-    R[s::s, e2-1, :] = R_true[s::s, e2-1, :]
+    e1, e2 = R_true.shape[:2]
+    R[0, ::s] = R_true[0, ::s]
+    R[::s, 0] = R_true[::s, 0]
+    R[e1-1, s:e2-s:s] = R_true[e1-1, s:e2-s:s]
+    R[s::s, e2-1] = R_true[s::s, e2-1]
     return R
 
 
