@@ -98,7 +98,7 @@ class reconstructor:
         else:
             torch.set_default_tensor_type(torch.DoubleTensor)
             use_gpu = False
-        gpr2sgpr_thresh = 5000
+        self.gpr2sgpr_thresh = 5000
         input_dim = np.ndim(y)
         self.X, self.y = gprutils.prepare_training_data(X, y)
         if lengthscale is None:
@@ -120,7 +120,7 @@ class reconstructor:
             self.y = self.y.cuda()
             if self.Xtest is not None:
                 self.Xtest = self.Xtest.cuda()
-        if len(self.X) < gpr2sgpr_thresh:
+        if len(self.X) < self.gpr2sgpr_thresh:
             self.model = gp.models.GPRegression(self.X,  self.y, kernel)
         else:
             if indpoints is None:
@@ -172,7 +172,7 @@ class reconstructor:
             self.lscales.append(self.model.kernel.lengthscale_map.tolist())
             self.amp_all.append(self.model.kernel.variance_map.item())
             self.noise_all.append(self.model.noise.item())
-            if len(self.X) > gpr2sgpr_thresh:
+            if len(self.X) > self.gpr2sgpr_thresh:
                 self.indpoints_all.append(self.model.Xu.detach().cpu().numpy())
             if self.verbose and (i % 100 == 0 or i == self.iterations - 1):
                 print('iter: {} ...'.format(i),

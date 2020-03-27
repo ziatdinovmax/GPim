@@ -101,7 +101,7 @@ class skreconstructor:
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
             torch.set_default_tensor_type(torch.cuda.DoubleTensor)
-        gpr2sgpr_thresh = 1e4
+        self.gpr2sgpr_thresh = 1e4
         input_dim = np.ndim(y)
         X, y = gprutils.prepare_training_data(X, y)
         Xtest = gprutils.prepare_test_data(Xtest)
@@ -120,8 +120,8 @@ class skreconstructor:
                              use_gpu, lengthscale=lengthscale,
                              lengthscale_init=lengthscale_init)
         self.model = skgprmodel(self.X, self.y,
-                                _kernel, self.likelihood,
-                                input_dim, grid_points_ratio)
+                                _kernel, self.likelihood, input_dim,
+                                grid_points_ratio, self.gpr2sgpr_thresh)
         if use_gpu:
             self.model.cuda()
         self.iterations = iterations
@@ -154,7 +154,7 @@ class skreconstructor:
             loss = -mll(output, self.y)
             loss.backward()
             optimizer.step()
-            if len(self.X) < gpr2sgpr_thresh:
+            if len(self.X) < self.gpr2sgpr_thresh:
                 self.lscales.append(
                     self.model.covar_module.base_kernel.lengthscale.tolist()[0]
                 )
@@ -273,7 +273,8 @@ class skgprmodel(gpytorch.models.ExactGP):
     """
 
     def __init__(self, X, y, kernel, likelihood,
-                 input_dim=3, grid_points_ratio=1.):
+                 input_dim=3, grid_points_ratio=1.,
+                 gpr2sgpr_thresh):
         """
         Initializes model parameters
         """
