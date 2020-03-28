@@ -27,8 +27,9 @@ class reconstructor:
     Class for Gaussian process (GP) regression-based reconstuction
     of sparse 2D image and 3D spectroscopic datasets,
     and system exploration based on maximal uncertainty reduction.
-    Performs full GP regresion if a total number of training points
-    is less than 1000. Otherwise, performs a sparse GP regression.
+    By default, performs full GP regresion if a total number of training points
+    is less than 5000 and number of dimensions is less than 3.
+    Otherwise, performs a sparse GP regression.
 
     Args:
         X (ndarray):
@@ -66,6 +67,8 @@ class reconstructor:
             Prints training statistics after each 100th training iteration
         seed (int):
             for reproducibility
+        **sparse (bool):
+            Perform sparse GP regression in all cases
         **amplitude (float): kernel variance or amplitude squared
     """
     def __init__(self,
@@ -74,6 +77,7 @@ class reconstructor:
                  Xtest=None,
                  kernel='RBF',
                  lengthscale=None,
+                 sparse=False,
                  indpoints=None,
                  learning_rate=5e-2,
                  iterations=1000,
@@ -100,9 +104,7 @@ class reconstructor:
             use_gpu = False
         input_dim = np.ndim(y)
         self.X, self.y = gprutils.prepare_training_data(X, y)
-        self.do_sparse = False
-        if self.X.shape[-1] > 2 and len(self.X) >= 5e3:
-            self.do_sparse = True
+        self.do_sparse = sparse
         if lengthscale is None:
             lengthscale = [[0. for l in range(input_dim)],
                            [np.mean(y.shape) / 2 for l in range(input_dim)]]

@@ -21,8 +21,13 @@ import warnings
 
 class skreconstructor:
     """
-    GP regression model with structured kernel interpolation
-    for 2D/3D/4D image data reconstruction
+    GpyTorch implementation of Gaussian process (GP)
+    regression-based reconstuction of sparse 2D-4D images,
+    and system exploration based on maximal uncertainty reduction,
+    Performs a standard kernel GP regresion
+    if a total number of training points is less than 5000
+    and a number of dimensions is less than 3.
+    Otherwise, performs a structured kernel GP regression.
 
     Args:
         X (ndarray):
@@ -49,25 +54,27 @@ class skreconstructor:
             Determines lower (1st list) and upper (2nd list) bounds
             for kernel lengthscales. The number of elements in each list
             is equal to the dataset dimensionality.
+        sparse (bool):
+            Perform structured kernel interpolation GP
         iterations (int):
             Number of training steps
         learning_rate (float):
             Learning rate for model training
-        grid_points_ratio (float):
-            Ratio of inducing points to overall points
-        max_root (int):
-            Maximum number of Lanczos iterations to perform
-            in prediction stage
-        num_batches (int):
-            Number of batches for splitting the Xtest array
-            (for large datasets, you may not have enough GPU memory
-            to process the entire dataset at once)
         use_gpu (bool):
             Uses GPU hardware accelerator when set to 'True'
         verbose (bool):
             Print statistics after each training iteration
         seed (int):
             for reproducibility
+        **grid_points_ratio (float):
+            Ratio of inducing points to overall points
+        **max_root (int):
+            Maximum number of Lanczos iterations to perform
+            in prediction stage
+        **num_batches (int):
+            Number of batches for splitting the Xtest array
+            (for large datasets, you may not have enough GPU memory
+            to process the entire dataset at once)
     """
     def __init__(self,
                  X,
@@ -75,14 +82,13 @@ class skreconstructor:
                  Xtest=None,
                  kernel='RBF',
                  lengthscale=None,
-                 iterations=50,
+                 sparse=False,
                  learning_rate=.1,
-                 grid_points_ratio=1.,
-                 maxroot=100,
-                 num_batches=1,
+                 iterations=50,
                  use_gpu=1,
                  verbose=0,
-                 seed=0):
+                 seed=0,
+                 **kwargs):
         """
         Initiates reconstructor parameters
         and pre-processes training and test data arrays
@@ -99,10 +105,9 @@ class skreconstructor:
         if Xtest is not None:
             Xtest = gprutils.prepare_test_data(Xtest)
         self.X, self.y, self.Xtest = X, y, Xtest
-        self.do_ski = False
-        if self.X.shape[-1] > 2 and len(self.X) >= 5e3:
-            self.do_ski = True
+        self.do_ski = sparse
         self.toeplitz = gpytorch.settings.use_toeplitz(True)
+        maxroot = kwargs.get("maxroot", 100)
         self.maxroot = gpytorch.settings.max_root_decomposition_size(maxroot)
         if use_gpu and torch.cuda.is_available():
             self.X, self.y = self.X.cuda(), self.y.cuda()
@@ -113,14 +118,15 @@ class skreconstructor:
             torch.set_default_tensor_type(torch.DoubleTensor)
         self.likelihood = gpytorch.likelihoods.GaussianLikelihood()
         _kernel = get_kernel(kernel, input_dim,
-                             use_gpu, lengthscale=lengthscale,)
+                             use_gpu, lengthscale=lengthscale)
+        grid_points_ratio = kwargs.get("grid_points_ratio", 1.)
         self.model = skgprmodel(self.X, self.y,
                                 _kernel, self.likelihood, input_dim,
                                 grid_points_ratio, self.do_ski)
         if use_gpu:
             self.model.cuda()
         self.iterations = iterations
-        self.num_batches = num_batches
+        self.num_batches = kwargs.get("num_batches", 1)
         self.learning_rate = learning_rate
 
         self.lscales, self.noise_all = [], []
