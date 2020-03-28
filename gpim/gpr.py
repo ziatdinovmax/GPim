@@ -55,7 +55,8 @@ class reconstructor:
             is multi-dimensional. For lists of two lists, the number of elements
             in each list must be equal to the dataset dimensionality.
         indpoints (int):
-            Number of inducing points for SparseGPRegression
+            Number of inducing points for SparseGPRegression.
+            Defaults to total_number_of_points // 10.
         learning_rate (float):
             Learning rate for model training
         iterations (int): Number of SVI training iteratons
