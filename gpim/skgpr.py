@@ -100,7 +100,7 @@ class skreconstructor:
             Xtest = gprutils.prepare_test_data(Xtest)
         self.X, self.y, self.Xtest = X, y, Xtest
         self.do_ski = False
-        if self.X.shape[-1] < 3 and len(self.X) >= 5e3:
+        if self.X.shape[-1] > 2 and len(self.X) >= 5e3:
             self.do_ski = True
         self.toeplitz = gpytorch.settings.use_toeplitz(True)
         self.maxroot = gpytorch.settings.max_root_decomposition_size(maxroot)

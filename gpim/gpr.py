@@ -101,7 +101,7 @@ class reconstructor:
         input_dim = np.ndim(y)
         self.X, self.y = gprutils.prepare_training_data(X, y)
         self.do_sparse = False
-        if self.X.shape[-1] < 3 and len(self.X) >= 5e3:
+        if self.X.shape[-1] > 2 and len(self.X) >= 5e3:
             self.do_sparse = True
         if lengthscale is None:
             lengthscale = [[0. for l in range(input_dim)],
