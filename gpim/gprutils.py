@@ -557,9 +557,9 @@ def plot_reconstructed_data2d(R, mean, save_fig=False, **kwargs):
     sparsity = kwargs.get('sparsity')
     cmap = kwargs.get('cmap', 'nipy_spectral')
     e1, e2 = R.shape
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
-    ax1.imshow(R, cmap=cmap)
-    ax2.imshow(mean.reshape(e1, e2), cmap=cmap)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6), dpi=100)
+    ax1.imshow(R, cmap=cmap, origin='bottom')
+    ax2.imshow(mean.reshape(e1, e2), cmap=cmap, origin='bottom')
     ax1.set_title('Input/corrupted data')
     if sparsity:
         ax2.set_title(
@@ -841,7 +841,7 @@ def plot_inducing_points_2d(hyperparams, **kwargs):
         np.linspace(0, 1,len(learned_inducing_points[plot_from:plot_to]))
     )
     for xy, c in zip(learned_inducing_points[plot_from:plot_to], colors):
-        x, y = xy.T
+        y, x = xy.T
         ax.scatter(x[::indp_nth], y[::indp_nth], c=[c], s=.15)
     clrbar = np.linspace(
         0, len(learned_inducing_points[plot_from:plot_to])).reshape(-1, 1)
