@@ -18,36 +18,46 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 
-def max_uncertainty(sd, dist_edge):
+def acquisistion(mean, sd, acquisition_function=None):
     """
-    Finds first 100 points with maximum "uncertainty"
-    from 3D array with standard deviation values
+    Takes GP-predicted mean and standard deviation
+    and calculates an acquisition function
 
     Args:
+        mean (ndarray)
+            GP-predicted mean with dimensions
+            :math:`N \\times M` or :math:`N \\times M \\times L`.
+            For hyperspectral data, *N* and *M* usually correspond
+            to spatial dimensions, whereas *L* is an "energy"dimension
         sd (ndarray)
-            Predicted standard deviation with dimensions
-            :math:`N \\times M \\times L`. For hyperspectral data,
-            *N* and *M* usually correspond to spatial dimensions,
-            whereas *L* is an "energy"dimension
-        dist_edge (list of two integers):
-            Edge regions not considered for max uncertainty evaluation
+            GP-predicted standard deviation with dimensions
+            :math:`N \\times M` or :math:`N \\times M \\times L`.
+            For hyperspectral data, *N* and *M* usually correspond
+            to spatial dimensions, whereas *L* is an "energy"dimension
+        acquisition_function (python function):
+            Function that takes two parameters, mean and sd,
+            applies some math operation to them
+            (e.g. :math:`\\upmu - 2 \\times \\upsigma`)
+            and returns the result
 
     Returns:
-        Lists of indices and values corresponding
-        to the first 100 uncertainty points
+        Indices and values of the points with the largest values
+        of acquisition function
     """
-    # sum along the last dimension
     if np.ndim(sd) == 3:
         sd = np.sum(sd, axis=-1)
-    # mask the edges
-    sd = mask_edges(sd, dist_edge)
-    # find first 100 points with the largest uncertainty
+    if np.ndim(mean) == 3:
+        sd = np.sum(mean, axis=-1)
     amax_list, uncert_list = [], []
-    for i in range(100):
-        amax = [i[0] for i in np.where(sd == sd.max())]
+    if acquisition_function is None:
+        acq = sd
+    else:
+        acq = acquisition_function(mean, sd)
+    for i in range(len(sd.flatten())):
+        amax = [i[0] for i in np.where(acq == acq.max())]
         amax_list.append(amax)
-        uncert_list.append(sd.max())
-        sd[amax[0], amax[1]] = 0
+        uncert_list.append(acq.max())
+        acq[amax[0], amax[1]] = acq.min() - 1
 
     return amax_list, uncert_list
 
@@ -93,14 +103,14 @@ def checkvalues(uncert_idx_list, uncert_idx_all, uncert_val_list):
         Otherwise, returns the next/closest value from the list.
     """
     _idx = 0
-    print('Maximum uncertainty of {} at {}'.format(
+    print('Acquisition function value {} at {}'.format(
         uncert_val_list[_idx], uncert_idx_list[_idx]))
     if len(uncert_idx_all) == 0:
         return uncert_idx_list[_idx], uncert_val_list[_idx]
     while 1 in [1 for a in uncert_idx_all if a == uncert_idx_list[_idx]]:
         print("Finding the next max point...")
         _idx = _idx + 1
-        print('Maximum uncertainty of {} at {}'.format(
+        print('Acquisition function value {} at {}'.format(
             uncert_val_list[_idx], uncert_idx_list[_idx]))
     return uncert_idx_list[_idx], uncert_val_list[_idx]
 
