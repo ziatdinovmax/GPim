@@ -4,4 +4,4 @@ ports:
  - port: 8080
    onOpen: open-browser
 tasks:
- - command: jupyter lab --no-browser --port 8080
+ - command: jupyter lab --port 8080
