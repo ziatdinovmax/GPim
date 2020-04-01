@@ -47,7 +47,7 @@ def acquisistion(mean, sd, acquisition_function=None):
     if np.ndim(sd) == 3:
         sd = np.sum(sd, axis=-1)
     if np.ndim(mean) == 3:
-        sd = np.sum(mean, axis=-1)
+        mean = np.sum(mean, axis=-1)
     amax_list, uncert_list = [], []
     if acquisition_function is None:
         acq = sd
