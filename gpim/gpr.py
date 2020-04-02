@@ -165,7 +165,7 @@ class reconstructor:
             if bad_epochs == self.patience:
                 break
                 if self.verbose:
-                    print('The training is stopped at {} iterations due to bad epochs'.format(i) 
+                    print("The training is stopped at {} iterations due to bad epochs".format(i)) 
             loss.backward()
             optimizer.step()
             self.lscales.append(self.sgpr.kernel.lengthscale_map.tolist())
