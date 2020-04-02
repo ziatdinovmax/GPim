@@ -75,7 +75,7 @@ class reconstructor:
                  use_gpu=False,
                  verbose=False,
                  seed=0,
-                 patience = 20
+                 patience = 20,
                  **kwargs):
         """
         Initiates reconstructor parameters
