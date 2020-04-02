@@ -80,6 +80,7 @@ class reconstructor:
         Initiates reconstructor parameters
         and pre-processes training and test data arrays
         """
+        self.verbose = verbose
         torch.manual_seed(seed)
         pyro.set_rng_seed(seed)
         pyro.clear_param_store()
@@ -112,7 +113,8 @@ class reconstructor:
             self.Xtest = self.Xtest.cuda()
         self.sgpr = gp.models.SparseGPRegression(
             self.X, self.y, kernel, Xu, jitter=1.0e-5)
-        print("# of inducing points for GP regression: {}".format(len(Xu)))
+        if self.verbose:
+            print("# of inducing points for GP regression: {}".format(len(Xu)))
         if use_gpu:
             self.sgpr.cuda()
         self.learning_rate = learning_rate
@@ -126,7 +128,7 @@ class reconstructor:
             "variance": self.amp_all,
             "inducing_points": self.indpoints_all
         }
-        self.verbose = verbose
+        
 
     def train(self, **kwargs):
         """
@@ -144,7 +146,8 @@ class reconstructor:
         optimizer = torch.optim.Adam(self.sgpr.parameters(), lr=self.learning_rate)
         loss_fn = pyro.infer.Trace_ELBO().differentiable_loss
         start_time = time.time()
-        print('Model training...')
+        if self.verbose:
+            print('Model training...')
         for i in range(self.iterations):
             optimizer.zero_grad()
             loss = loss_fn(self.sgpr.model, self.sgpr.guide)
@@ -160,7 +163,7 @@ class reconstructor:
                       'amp: {} ...'.format(np.around(self.amp_all[-1], 4)),
                       'length: {} ...'.format(np.around(self.lscales[-1], 4)),
                       'noise: {} ...'.format(np.around(self.noise_all[-1], 7)))
-            if i == 100:
+            if self.verbose and i == 100:
                 print('average time per iteration: {} s'.format(
                     np.round(time.time() - start_time, 2) / 100))
         if self.verbose:
@@ -180,7 +183,8 @@ class reconstructor:
         Returns:
             Predictive mean and variance
         """
-        print("Calculating predictive mean and variance...", end=" ")
+        if self.verbose:
+            print("Calculating predictive mean and variance...", end=" ")
         with torch.no_grad():
             mean, cov = self.sgpr(self.Xtest, full_cov=False, noiseless=False)
         print("Done")
