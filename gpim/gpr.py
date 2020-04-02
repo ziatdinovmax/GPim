@@ -75,6 +75,7 @@ class reconstructor:
                  use_gpu=False,
                  verbose=False,
                  seed=0,
+                 patience = 20
                  **kwargs):
         """
         Initiates reconstructor parameters
@@ -119,6 +120,7 @@ class reconstructor:
             self.sgpr.cuda()
         self.learning_rate = learning_rate
         self.iterations = iterations
+        self.patience = patience
         self.hyperparams = {}
         self.indpoints_all = []
         self.lscales, self.noise_all, self.amp_all = [], [], []
@@ -148,9 +150,15 @@ class reconstructor:
         start_time = time.time()
         if self.verbose:
             print('Model training...')
+        loss = np.zeros(self.iterations+1)
+        loss[0] = 1e+5
+        bad_epochs = 0
         for i in range(self.iterations):
             optimizer.zero_grad()
             loss = loss_fn(self.sgpr.model, self.sgpr.guide)
+            loss[i+1] = loss.item()
+            if ((loss[i]-loss[i+1])/loss[i])) < 0.01:
+                bad_epochs += 1
             loss.backward()
             optimizer.step()
             self.lscales.append(self.sgpr.kernel.lengthscale_map.tolist())
@@ -163,6 +171,7 @@ class reconstructor:
                       'amp: {} ...'.format(np.around(self.amp_all[-1], 4)),
                       'length: {} ...'.format(np.around(self.lscales[-1], 4)),
                       'noise: {} ...'.format(np.around(self.noise_all[-1], 7)))
+                print(bad_epochs)
             if self.verbose and i == 100:
                 print('average time per iteration: {} s'.format(
                     np.round(time.time() - start_time, 2) / 100))
