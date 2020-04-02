@@ -150,14 +150,14 @@ class reconstructor:
         start_time = time.time()
         if self.verbose:
             print('Model training...')
-        loss = np.zeros(self.iterations+1)
-        loss[0] = 1e+5
+        loss_register = np.zeros(self.iterations+1)
+        loss_register[0] = 1e+5
         bad_epochs = 0
         for i in range(self.iterations):
             optimizer.zero_grad()
             loss = loss_fn(self.sgpr.model, self.sgpr.guide)
-            loss[i+1] = loss.detach().numpy()
-            if ((loss[i]-loss[i+1])/loss[i]) < 0.01:
+            loss_register[i+1] = loss.detach().numpy()
+            if ((loss_register[i]-loss_register[i+1])/loss_register[i]) < 0.01:
                 bad_epochs += 1
             loss.backward()
             optimizer.step()
