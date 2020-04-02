@@ -183,7 +183,7 @@ class reconstructor:
                     np.around(self.sgpr.kernel.variance_map.item(), 4),
                     np.around(self.sgpr.kernel.lengthscale_map.tolist(), 4),
                     np.around(self.sgpr.noise.item(), 7)))
-        return
+        return loss_register
 
     def predict(self):
         """
