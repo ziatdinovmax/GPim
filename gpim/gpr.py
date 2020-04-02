@@ -163,13 +163,14 @@ class reconstructor:
             if i == 100:
                 print('average time per iteration: {} s'.format(
                     np.round(time.time() - start_time, 2) / 100))
-        print('training completed in {} s'.format(
-            np.round(time.time() - start_time, 2)))
-        print('Final parameter values:\n',
-              'amp: {}, lengthscale: {}, noise: {}'.format(
-                np.around(self.sgpr.kernel.variance_map.item(), 4),
-                np.around(self.sgpr.kernel.lengthscale_map.tolist(), 4),
-                np.around(self.sgpr.noise.item(), 7)))
+        if self.verbose:
+            print('training completed in {} s'.format(
+                np.round(time.time() - start_time, 2)))
+            print('Final parameter values:\n',
+                  'amp: {}, lengthscale: {}, noise: {}'.format(
+                    np.around(self.sgpr.kernel.variance_map.item(), 4),
+                    np.around(self.sgpr.kernel.lengthscale_map.tolist(), 4),
+                    np.around(self.sgpr.noise.item(), 7)))
         return
 
     def predict(self):
