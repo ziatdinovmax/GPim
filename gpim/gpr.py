@@ -157,7 +157,7 @@ class reconstructor:
             optimizer.zero_grad()
             loss = loss_fn(self.sgpr.model, self.sgpr.guide)
             loss[i+1] = loss.item()
-            if ((loss[i]-loss[i+1])/loss[i])) < 0.01:
+            if ((loss[i]-loss[i+1])/loss[i]) < 0.01:
                 bad_epochs += 1
             loss.backward()
             optimizer.step()
