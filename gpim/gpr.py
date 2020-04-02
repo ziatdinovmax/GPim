@@ -157,8 +157,15 @@ class reconstructor:
             optimizer.zero_grad()
             loss = loss_fn(self.sgpr.model, self.sgpr.guide)
             loss_register[i+1] = loss.detach().numpy()
-            if ((loss_register[i]-loss_register[i+1])/loss_register[i]) < 0.01:
+            if ( (loss_register[i]-loss_register[i+1]) < (1e-5*np.abs(loss_register[i])) ):
                 bad_epochs += 1
+            else:
+                bad_epochs = 0
+
+            if bad_epochs == self.patience:
+                break
+                if self.verbose:
+                    print('The training is stopped at {} iterations due to bad epochs'.format(i) 
             loss.backward()
             optimizer.step()
             self.lscales.append(self.sgpr.kernel.lengthscale_map.tolist())
