@@ -75,11 +75,13 @@ class reconstructor:
                  use_gpu=False,
                  verbose=False,
                  seed=0,
+                 patience = 20,
                  **kwargs):
         """
         Initiates reconstructor parameters
         and pre-processes training and test data arrays
         """
+        self.verbose = verbose
         torch.manual_seed(seed)
         pyro.set_rng_seed(seed)
         pyro.clear_param_store()
@@ -112,11 +114,13 @@ class reconstructor:
             self.Xtest = self.Xtest.cuda()
         self.sgpr = gp.models.SparseGPRegression(
             self.X, self.y, kernel, Xu, jitter=1.0e-5)
-        print("# of inducing points for GP regression: {}".format(len(Xu)))
+        if self.verbose:
+            print("# of inducing points for GP regression: {}".format(len(Xu)))
         if use_gpu:
             self.sgpr.cuda()
         self.learning_rate = learning_rate
         self.iterations = iterations
+        self.patience = patience
         self.hyperparams = {}
         self.indpoints_all = []
         self.lscales, self.noise_all, self.amp_all = [], [], []
@@ -126,7 +130,7 @@ class reconstructor:
             "variance": self.amp_all,
             "inducing_points": self.indpoints_all
         }
-        self.verbose = verbose
+        
 
     def train(self, **kwargs):
         """
@@ -144,10 +148,25 @@ class reconstructor:
         optimizer = torch.optim.Adam(self.sgpr.parameters(), lr=self.learning_rate)
         loss_fn = pyro.infer.Trace_ELBO().differentiable_loss
         start_time = time.time()
-        print('Model training...')
+        if self.verbose:
+            print('Model training...')
+        loss_register = np.zeros(self.iterations+1)
+        loss_register[0] = 1e+5
+        bad_epochs = 0
         for i in range(self.iterations):
             optimizer.zero_grad()
             loss = loss_fn(self.sgpr.model, self.sgpr.guide)
+            loss_register[i+1] = loss.detach().numpy()
+            if ( (loss_register[i]-loss_register[i+1]) < (1e-5*np.abs(loss_register[i])) ):
+                bad_epochs += 1
+            else:
+                bad_epochs = 0
+
+            if bad_epochs == self.patience:
+                if self.verbose:
+                    print("The training is stopped at {} iterations due to bad epochs".format(i))
+                break
+                 
             loss.backward()
             optimizer.step()
             self.lscales.append(self.sgpr.kernel.lengthscale_map.tolist())
@@ -160,16 +179,18 @@ class reconstructor:
                       'amp: {} ...'.format(np.around(self.amp_all[-1], 4)),
                       'length: {} ...'.format(np.around(self.lscales[-1], 4)),
                       'noise: {} ...'.format(np.around(self.noise_all[-1], 7)))
-            if i == 100:
+                print(bad_epochs)
+            if self.verbose and i == 100:
                 print('average time per iteration: {} s'.format(
                     np.round(time.time() - start_time, 2) / 100))
-        print('training completed in {} s'.format(
-            np.round(time.time() - start_time, 2)))
-        print('Final parameter values:\n',
-              'amp: {}, lengthscale: {}, noise: {}'.format(
-                np.around(self.sgpr.kernel.variance_map.item(), 4),
-                np.around(self.sgpr.kernel.lengthscale_map.tolist(), 4),
-                np.around(self.sgpr.noise.item(), 7)))
+        if self.verbose:
+            print('training completed in {} s'.format(
+                np.round(time.time() - start_time, 2)))
+            print('Final parameter values:\n',
+                  'amp: {}, lengthscale: {}, noise: {}'.format(
+                    np.around(self.sgpr.kernel.variance_map.item(), 4),
+                    np.around(self.sgpr.kernel.lengthscale_map.tolist(), 4),
+                    np.around(self.sgpr.noise.item(), 7)))
         return
 
     def predict(self):
@@ -179,10 +200,12 @@ class reconstructor:
         Returns:
             Predictive mean and variance
         """
-        print("Calculating predictive mean and variance...", end=" ")
+        if self.verbose:
+            print("Calculating predictive mean and variance...", end=" ")
         with torch.no_grad():
             mean, cov = self.sgpr(self.Xtest, full_cov=False, noiseless=False)
-        print("Done")
+        if self.verbose:
+            print("Done")
         return mean.cpu().numpy(), cov.sqrt().cpu().numpy()
 
     def run(self, **kwargs):
