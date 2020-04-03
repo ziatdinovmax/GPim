@@ -75,7 +75,7 @@ class reconstructor:
                  use_gpu=False,
                  verbose=False,
                  seed=0,
-                 patience = 20,
+                 patience=20,
                  **kwargs):
         """
         Initiates reconstructor parameters
@@ -156,7 +156,7 @@ class reconstructor:
         for i in range(self.iterations):
             optimizer.zero_grad()
             loss = loss_fn(self.sgpr.model, self.sgpr.guide)
-            loss_register[i+1] = loss.detach().numpy()
+            loss_register[i+1] = loss.item()
             if ( (loss_register[i]-loss_register[i+1]) < (1e-5*np.abs(loss_register[i])) ):
                 bad_epochs += 1
             else:
