@@ -159,9 +159,6 @@ class reconstructor:
             loss_register[i+1] = loss.item()
             if ( (loss_register[i]-loss_register[i+1]) < (1e-5*np.abs(loss_register[i])) ):
                 bad_epochs += 1
-            else:
-                bad_epochs = 0
-
             if bad_epochs == self.patience:
                 if self.verbose:
                     print("The training is stopped at {} iterations due to bad epochs".format(i))
