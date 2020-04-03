@@ -23,10 +23,8 @@ class reconstructor:
     """
     Class for Gaussian process (GP) regression-based reconstuction
     of sparse 2D image and 3D spectroscopic datasets,
-    and system exploration based on maximal uncertainty reduction.
-    By default, performs full GP regresion if a total number of training points
-    is less than 5000 and number of dimensions is less than 3.
-    Otherwise, performs a sparse GP regression.
+    and sample exploration with hyperspectral measurements
+    based on maximal uncertainty reduction.
     Args:
         X (ndarray):
             Grid indices with dimensions :math:`c \\times N \\times M`
@@ -150,7 +148,7 @@ class reconstructor:
 
     def train(self, **kwargs):
         """
-        Training GP regression model
+        Training sparse GP regression model
         Args:
             **learning_rate (float): learning rate
             **iterations (int): number of SVI training iteratons

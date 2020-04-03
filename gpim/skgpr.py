@@ -1,13 +1,10 @@
 '''
 skgpr.py
 ======
-
 Gaussian process regression model with a structured kernel interpolation.
-
 Serves as a high-level wrapper for GPyTorch's (https://gpytorch.ai)
 Gaussian processes module with a structred kernel interpolation method
 for easy work with scientific image (2D) and hyperspectral (3D, 4D) data.
-
 Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
 '''
 
@@ -21,14 +18,8 @@ import warnings
 
 class skreconstructor:
     """
-    GpyTorch implementation of Gaussian process (GP)
-    regression-based reconstuction of sparse 2D-4D images,
-    and system exploration based on maximal uncertainty reduction,
-    Performs a standard kernel GP regresion
-    if a total number of training points is less than 5000
-    and a number of dimensions is less than 3.
-    Otherwise, performs a structured kernel GP regression.
-
+    GP regression model with structured kernel interpolation
+    for 2D/3D/4D image data reconstruction
     Args:
         X (ndarray):
             Grid indices with dimension :math:`c \\times N \\times M`,
@@ -288,7 +279,6 @@ class skreconstructor:
 class skgprmodel(gpytorch.models.ExactGP):
     """
     GP regression model with structured kernel interpolation
-
     Args:
         X (ndarray):
             Grid indices with dimension :math:`n \\times c`,
@@ -335,7 +325,6 @@ class skgprmodel(gpytorch.models.ExactGP):
 def get_kernel(kernel_type, input_dim, on_gpu=True, **kwargs):
     """
     Initializes one of the following kernels: RBF, Matern
-
     Args:
         kernel_type (str):
             Kernel type ('RBF', Matern52')
