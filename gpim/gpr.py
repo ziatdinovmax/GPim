@@ -1,14 +1,11 @@
 '''
 gpr.py
 ======
-
 Sparse Gaussian process regression:
 model training, prediction and uncertainty exploration
-
 This module serves as a high-level wrapper for sparse Gaussian processes module
 from Pyro probabilistic programming library (https://pyro.ai/)
 for easy work with scientific image (2D) and hyperspectral (3D) data.
-
 Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
 '''
 
@@ -28,7 +25,6 @@ class reconstructor:
     of sparse 2D image and 3D spectroscopic datasets,
     and sample exploration with hyperspectral measurements
     based on maximal uncertainty reduction.
-
     Args:
         X (ndarray):
             Grid indices with dimensions :math:`c \\times N \\times M`
@@ -75,13 +71,11 @@ class reconstructor:
                  use_gpu=False,
                  verbose=False,
                  seed=0,
-                 patience=20,
                  **kwargs):
         """
         Initiates reconstructor parameters
         and pre-processes training and test data arrays
         """
-        self.verbose = verbose
         torch.manual_seed(seed)
         pyro.set_rng_seed(seed)
         pyro.clear_param_store()
@@ -114,13 +108,11 @@ class reconstructor:
             self.Xtest = self.Xtest.cuda()
         self.sgpr = gp.models.SparseGPRegression(
             self.X, self.y, kernel, Xu, jitter=1.0e-5)
-        if self.verbose:
-            print("# of inducing points for GP regression: {}".format(len(Xu)))
+        print("# of inducing points for GP regression: {}".format(len(Xu)))
         if use_gpu:
             self.sgpr.cuda()
         self.learning_rate = learning_rate
         self.iterations = iterations
-        self.patience = patience
         self.hyperparams = {}
         self.indpoints_all = []
         self.lscales, self.noise_all, self.amp_all = [], [], []
@@ -130,12 +122,11 @@ class reconstructor:
             "variance": self.amp_all,
             "inducing_points": self.indpoints_all
         }
-        
+        self.verbose = verbose
 
     def train(self, **kwargs):
         """
         Training sparse GP regression model
-
         Args:
             **learning_rate (float): learning rate
             **iterations (int): number of SVI training iteratons
@@ -148,22 +139,10 @@ class reconstructor:
         optimizer = torch.optim.Adam(self.sgpr.parameters(), lr=self.learning_rate)
         loss_fn = pyro.infer.Trace_ELBO().differentiable_loss
         start_time = time.time()
-        if self.verbose:
-            print('Model training...')
-        loss_register = np.zeros(self.iterations+1)
-        loss_register[0] = 1e+5
-        bad_epochs = 0
+        print('Model training...')
         for i in range(self.iterations):
             optimizer.zero_grad()
             loss = loss_fn(self.sgpr.model, self.sgpr.guide)
-            loss_register[i+1] = loss.item()
-            if ( (loss_register[i]-loss_register[i+1]) < (1e-5*np.abs(loss_register[i])) ):
-                bad_epochs += 1
-            if bad_epochs == self.patience:
-                if self.verbose:
-                    print("The training is stopped at {} iterations due to bad epochs".format(i))
-                break
-                 
             loss.backward()
             optimizer.step()
             self.lscales.append(self.sgpr.kernel.lengthscale_map.tolist())
@@ -176,50 +155,42 @@ class reconstructor:
                       'amp: {} ...'.format(np.around(self.amp_all[-1], 4)),
                       'length: {} ...'.format(np.around(self.lscales[-1], 4)),
                       'noise: {} ...'.format(np.around(self.noise_all[-1], 7)))
-                print(bad_epochs)
-            if self.verbose and i == 100:
+            if i == 100:
                 print('average time per iteration: {} s'.format(
                     np.round(time.time() - start_time, 2) / 100))
-        if self.verbose:
-            print('training completed in {} s'.format(
-                np.round(time.time() - start_time, 2)))
-            print('Final parameter values:\n',
-                  'amp: {}, lengthscale: {}, noise: {}'.format(
-                    np.around(self.sgpr.kernel.variance_map.item(), 4),
-                    np.around(self.sgpr.kernel.lengthscale_map.tolist(), 4),
-                    np.around(self.sgpr.noise.item(), 7)))
+        print('training completed in {} s'.format(
+            np.round(time.time() - start_time, 2)))
+        print('Final parameter values:\n',
+              'amp: {}, lengthscale: {}, noise: {}'.format(
+                np.around(self.sgpr.kernel.variance_map.item(), 4),
+                np.around(self.sgpr.kernel.lengthscale_map.tolist(), 4),
+                np.around(self.sgpr.noise.item(), 7)))
         return
 
     def predict(self):
         """
         Use trained GP regression model to make predictions
-
         Returns:
             Predictive mean and variance
         """
-        if self.verbose:
-            print("Calculating predictive mean and variance...", end=" ")
+        print("Calculating predictive mean and variance...", end=" ")
         with torch.no_grad():
             mean, cov = self.sgpr(self.Xtest, full_cov=False, noiseless=False)
-        if self.verbose:
-            print("Done")
+        print("Done")
         return mean.cpu().numpy(), cov.sqrt().cpu().numpy()
 
     def run(self, **kwargs):
         """
         Train the initialized model and calculate predictive mean and variance
-
         Args:
             **learning_rate (float):
                 learning rate for GP regression model training
             **steps (int):
                 number of SVI training iteratons
-
         Returns:
             Predictive mean and SD as flattened ndarrays and
             dictionary with hyperparameters evolution
             as a function of SVI steps
-
         """
         if kwargs.get("learning_rate") is not None:
             self.learning_rate = kwargs.get("learning_rate")
@@ -239,7 +210,6 @@ class reconstructor:
         """
         Performs single train-predict step for exploration analysis
         returning a new point with maximum uncertainty
-
         Args:
             dist_edge (list with two integers):
                 edge regions not considered in max uncertainty evaluation
@@ -247,7 +217,6 @@ class reconstructor:
                 learning rate for GP regression model training
             **steps (int):
                 number of SVI training iteratons
-
         Returns:
             lists of indices and values for points with maximum uncertainty,
             predictive mean and standard deviation (as flattened numpy arrays)
@@ -270,7 +239,6 @@ def get_kernel(kernel_type, input_dim, lengthscale, use_gpu=False, **kwargs):
     """
     Initalizes one of the following kernels:
     RBF, Rational Quadratic, Matern
-
     Args:
         kernel_type (str):
             kernel type ('RBF', 'Rational Quadratic', Matern52')
@@ -286,7 +254,6 @@ def get_kernel(kernel_type, input_dim, lengthscale, use_gpu=False, **kwargs):
         **amplitude (list with two floats):
             determines bounds on kernel amplitude parameter
             (default is from 1e-4 to 10)
-
     Returns:
         Pyro kernel object
     """
