@@ -18,35 +18,46 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 
-def max_uncertainty(sd, dist_edge):
+def acquisistion(mean, sd, acquisition_function=None):
     """
-    Finds first 100 points with maximum "uncertainty"
-    from 3D array with standard deviation values
+    Takes GP-predicted mean and standard deviation
+    and calculates an acquisition function
 
     Args:
+        mean (ndarray)
+            GP-predicted mean with dimensions
+            :math:`N \\times M` or :math:`N \\times M \\times L`.
+            For hyperspectral data, *N* and *M* usually correspond
+            to spatial dimensions, whereas *L* is an "energy"dimension
         sd (ndarray)
-            Predicted standard deviation with dimensions
-            :math:`N \\times M \\times L`. For hyperspectral data,
-            *N* and *M* usually correspond to spatial dimensions,
-            whereas *L* is an "energy"dimension
-        dist_edge (list of two integers):
-            Edge regions not considered for max uncertainty evaluation
+            GP-predicted standard deviation with dimensions
+            :math:`N \\times M` or :math:`N \\times M \\times L`.
+            For hyperspectral data, *N* and *M* usually correspond
+            to spatial dimensions, whereas *L* is an "energy"dimension
+        acquisition_function (python function):
+            Function that takes two parameters, mean and sd,
+            applies some math operation to them
+            (e.g. :math:`\\upmu - 2 \\times \\upsigma`)
+            and returns the result
 
     Returns:
-        Lists of indices and values corresponding
-        to the first 100 uncertainty points
+        Indices and values of the points with the largest values
+        of acquisition function
     """
-    # sum along the last dimension
-    sd = np.sum(sd, axis=-1)
-    # mask the edges
-    sd = mask_edges(sd, dist_edge)
-    # find first 100 points with the largest uncertainty
+    if np.ndim(sd) == 3:
+        sd = np.sum(sd, axis=-1)
+    if np.ndim(mean) == 3:
+        mean = np.sum(mean, axis=-1)
     amax_list, uncert_list = [], []
-    for i in range(100):
-        amax = [i[0] for i in np.where(sd == sd.max())]
+    if acquisition_function is None:
+        acq = sd
+    else:
+        acq = acquisition_function(mean, sd)
+    for i in range(len(sd.flatten())):
+        amax = [i[0] for i in np.where(acq == acq.max())]
         amax_list.append(amax)
-        uncert_list.append(sd.max())
-        sd[amax[0], amax[1]] = 0
+        uncert_list.append(acq.max())
+        acq[amax[0], amax[1]] = acq.min() - 1
 
     return amax_list, uncert_list
 
@@ -92,14 +103,14 @@ def checkvalues(uncert_idx_list, uncert_idx_all, uncert_val_list):
         Otherwise, returns the next/closest value from the list.
     """
     _idx = 0
-    print('Maximum uncertainty of {} at {}'.format(
+    print('Acquisition function value {} at {}'.format(
         uncert_val_list[_idx], uncert_idx_list[_idx]))
     if len(uncert_idx_all) == 0:
         return uncert_idx_list[_idx], uncert_val_list[_idx]
     while 1 in [1 for a in uncert_idx_all if a == uncert_idx_list[_idx]]:
         print("Finding the next max point...")
         _idx = _idx + 1
-        print('Maximum uncertainty of {} at {}'.format(
+        print('Acquisition function value {} at {}'.format(
             uncert_val_list[_idx], uncert_idx_list[_idx]))
     return uncert_idx_list[_idx], uncert_val_list[_idx]
 
@@ -111,33 +122,29 @@ def do_measurement(R_true, X_true, R, X, uncertmax, measure):
 
     Args:
         R_true (ndarray):
-            Datacube with full observations ('ground truth');
-            dimensions are :math:`N \\times M \\times L`
+            Full observations ('ground truth');
         X_true (ndarray):
             Grid indices for full observation;
-            dimensions are :math: `N \\times M \\times L \\times 3`
         R (ndarray):
-            Datacube with partial observations (missing values are NaNs);
-            dimensions are :math:`N \\times M \\times L`.
+            Partial observations (missing values are NaNs);
         X (ndarray):
             Grid indices for partial observations (missing points are NaNs)
-            dimensions are :math: `N \\times M \\times L \\times 3`
         uncertmax (list):
             indices of point with maximum uncertainty
             (as determined by GP regression model)
         measure (int):
             half of measurement square
-    
+
     Returns:
         Updated R and X ndarrays
     """
     a0, a1 = uncertmax
     # make "observation"
-    R_obs = R_true[a0-measure:a0+measure+1, a1-measure:a1+measure+1, :]
-    X_obs = X_true[:, a0-measure:a0+measure+1, a1-measure:a1+measure+1, :]
+    R_obs = R_true[a0-measure:a0+measure+1, a1-measure:a1+measure+1]
+    X_obs = X_true[:, a0-measure:a0+measure+1, a1-measure:a1+measure+1]
     # update the input
-    R[a0-measure:a0+measure+1, a1-measure:a1+measure+1, :] = R_obs
-    X[:, a0-measure:a0+measure+1, a1-measure:a1+measure+1, :] = X_obs
+    R[a0-measure:a0+measure+1, a1-measure:a1+measure+1] = R_obs
+    X[:, a0-measure:a0+measure+1, a1-measure:a1+measure+1] = X_obs
     return R, X
 
 
@@ -426,20 +433,20 @@ def open_edge_points(R, R_true, s=6):
 
     Args:
         R (ndarray):
-            empty/sparse hyperspectral datacube
+            empty/sparse data
         R_true (ndarray):
-            hyperspectral datacube with "ground truth"
+            "ground truth"
         s (int):
             step value, which determines the density of opened edge points
 
     Returns:
         3D ndarray with opened edge points
     """
-    e1, e2, _ = R_true.shape
-    R[0, ::s, :] = R_true[0, ::s, :]
-    R[::s, 0, :] = R_true[::s, 0, :]
-    R[e1-1, s:e2-s:s, :] = R_true[e1-1, s:e2-s:s, :]
-    R[s::s, e2-1, :] = R_true[s::s, e2-1, :]
+    e1, e2 = R_true.shape[:2]
+    R[0, ::s] = R_true[0, ::s]
+    R[::s, 0] = R_true[::s, 0]
+    R[e1-1, s:e2-s:s] = R_true[e1-1, s:e2-s:s]
+    R[s::s, e2-1] = R_true[s::s, e2-1]
     return R
 
 
@@ -560,9 +567,9 @@ def plot_reconstructed_data2d(R, mean, save_fig=False, **kwargs):
     sparsity = kwargs.get('sparsity')
     cmap = kwargs.get('cmap', 'nipy_spectral')
     e1, e2 = R.shape
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
-    ax1.imshow(R, cmap=cmap)
-    ax2.imshow(mean.reshape(e1, e2), cmap=cmap)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6), dpi=100)
+    ax1.imshow(R, cmap=cmap, origin='bottom')
+    ax2.imshow(mean.reshape(e1, e2), cmap=cmap, origin='bottom')
     ax1.set_title('Input/corrupted data')
     if sparsity:
         ax2.set_title(
@@ -844,7 +851,7 @@ def plot_inducing_points_2d(hyperparams, **kwargs):
         np.linspace(0, 1,len(learned_inducing_points[plot_from:plot_to]))
     )
     for xy, c in zip(learned_inducing_points[plot_from:plot_to], colors):
-        x, y = xy.T
+        y, x = xy.T
         ax.scatter(x[::indp_nth], y[::indp_nth], c=[c], s=.15)
     clrbar = np.linspace(
         0, len(learned_inducing_points[plot_from:plot_to])).reshape(-1, 1)

@@ -13,6 +13,7 @@ import numpy as np
 from gpim import gprutils
 import torch
 import gpytorch
+import warnings
 
 
 class skreconstructor:
@@ -40,84 +41,84 @@ class skreconstructor:
             or :math:`N \\times M \\times L \\times K`
         kernel (str):
             Kernel type ('RBF' or 'Matern52')
-        lengthscale (list of two lists):
+        lengthscale (list of int  list of two list with ins):
             Determines lower (1st list) and upper (2nd list) bounds
             for kernel lengthscales. The number of elements in each list
             is equal to the dataset dimensionality.
-        lengthscale_init (list with floats):
-            Initializes lenghtscales at this values
+        sparse (bool):
+            Perform structured kernel interpolation GP
         iterations (int):
             Number of training steps
         learning_rate (float):
             Learning rate for model training
-        grid_points_ratio (float):
-            Ratio of inducing points to overall points
-        max_root (int):
-            Maximum number of Lanczos iterations to perform
-            in prediction stage
-        num_batches (int):
-            Number of batches for splitting the Xtest array
-            (for large datasets, you may not have enough GPU memory
-            to process the entire dataset at once)
-        calculate_sd (bool):
-            Calculates SD in prediction stage
-            (possible only when num_batches == 1)
         use_gpu (bool):
             Uses GPU hardware accelerator when set to 'True'
         verbose (bool):
             Print statistics after each training iteration
+        seed (int):
+            for reproducibility
+        **grid_points_ratio (float):
+            Ratio of inducing points to overall points
+        **max_root (int):
+            Maximum number of Lanczos iterations to perform
+            in prediction stage
+        **num_batches (int):
+            Number of batches for splitting the Xtest array
+            (for large datasets, you may not have enough GPU memory
+            to process the entire dataset at once)
     """
     def __init__(self,
                  X,
                  y,
-                 Xtest,
-                 kernel='Matern52',
+                 Xtest=None,
+                 kernel='RBF',
                  lengthscale=None,
-                 lengthscale_init=None,
-                 iterations=50,
+                 sparse=False,
                  learning_rate=.1,
-                 grid_points_ratio=1.,
-                 maxroot=100,
-                 num_batches=10,
-                 calculate_sd=0,
+                 iterations=50,
                  use_gpu=1,
                  verbose=0,
-                 seed=0):
+                 seed=0,
+                 **kwargs):
         """
         Initiates reconstructor parameters
         and pre-processes training and test data arrays
         """
         torch.manual_seed(seed)
-        input_dim = np.ndim(y)
-        X, y = gprutils.prepare_training_data(X, y)
-        Xtest = gprutils.prepare_test_data(Xtest)
-        self.X, self.y, self.Xtest = X, y, Xtest
-        self.toeplitz = gpytorch.settings.use_toeplitz(True)
-        self.maxroot = gpytorch.settings.max_root_decomposition_size(maxroot)
         if use_gpu and torch.cuda.is_available():
             torch.cuda.empty_cache()
             torch.cuda.manual_seed_all(seed)
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
             torch.set_default_tensor_type(torch.cuda.DoubleTensor)
+        input_dim = np.ndim(y)
+        X, y = gprutils.prepare_training_data(X, y)
+        if Xtest is not None:
+            Xtest = gprutils.prepare_test_data(Xtest)
+        self.X, self.y, self.Xtest = X, y, Xtest
+        self.do_ski = sparse
+        self.toeplitz = gpytorch.settings.use_toeplitz(True)
+        maxroot = kwargs.get("maxroot", 100)
+        self.maxroot = gpytorch.settings.max_root_decomposition_size(maxroot)
+        if use_gpu and torch.cuda.is_available():
             self.X, self.y = self.X.cuda(), self.y.cuda()
-            self.Xtest = self.Xtest.cuda()
+            if self.Xtest is not None:
+                self.Xtest = self.Xtest.cuda()
             self.toeplitz = gpytorch.settings.use_toeplitz(False)
         else:
             torch.set_default_tensor_type(torch.DoubleTensor)
         self.likelihood = gpytorch.likelihoods.GaussianLikelihood()
         _kernel = get_kernel(kernel, input_dim,
-                             use_gpu, lengthscale=lengthscale,
-                             lengthscale_init=lengthscale_init)
+                             use_gpu, lengthscale=lengthscale)
+        grid_points_ratio = kwargs.get("grid_points_ratio", 1.)
         self.model = skgprmodel(self.X, self.y,
-                                _kernel, self.likelihood,
-                                input_dim, grid_points_ratio)
+                                _kernel, self.likelihood, input_dim,
+                                grid_points_ratio, self.do_ski)
         if use_gpu:
             self.model.cuda()
         self.iterations = iterations
-        self.num_batches = num_batches
-        self.calculate_sd = calculate_sd
-        self.lr = learning_rate
+        self.num_batches = kwargs.get("num_batches", 1)
+        self.learning_rate = learning_rate
 
         self.lscales, self.noise_all = [], []
         self.hyperparams = {
@@ -126,14 +127,22 @@ class skreconstructor:
         }
         self.verbose = verbose
 
-    def train(self):
+    def train(self, **kwargs):
         """
-        Trains GP regression model with structured kernel interpolation
+        Training GP regression model
+
+        Args:
+            **learning_rate (float): learning rate
+            **iterations (int): number of SVI training iteratons
         """
+        if kwargs.get("learning_rate") is not None:
+            self.learning_rate = kwargs.get("learning_rate")
+        if kwargs.get("iterations") is not None:
+            self.iterations = kwargs.get("iterations")
         self.model.train()
         self.likelihood.train()
         optimizer = torch.optim.Adam(
-            [{'params': self.model.parameters()}], lr=self.lr)
+            [{'params': self.model.parameters()}], lr=self.learning_rate)
         mll = gpytorch.mlls.ExactMarginalLogLikelihood(
             self.likelihood, self.model)
         print('Model training...')
@@ -144,9 +153,14 @@ class skreconstructor:
             loss = -mll(output, self.y)
             loss.backward()
             optimizer.step()
-            self.lscales.append(
-                self.model.covar_module.base_kernel.base_kernel.lengthscale.tolist()[0]
-            )
+            if not self.do_ski:
+                self.lscales.append(
+                    self.model.covar_module.base_kernel.lengthscale.tolist()[0]
+                )
+            else:
+                self.lscales.append(
+                    self.model.covar_module.base_kernel.base_kernel.lengthscale.tolist()[0]
+                )
             self.noise_all.append(
                 self.model.likelihood.noise_covar.noise.item())
             if self.verbose and (i % 10 == 0 or i == self.iterations - 1):
@@ -165,12 +179,31 @@ class skreconstructor:
                 np.around(self.noise_all[-1], 7)))
         return
 
-    def predict(self, **kwargs):
+    def predict(self, Xtest=None, **kwargs):
         """
         Makes a prediction with trained GP regression model
+
+        Args:
+            Xtest (ndarray):
+            "Test" points (for prediction with a trained GP model)
+            with dimension :math:`N \\times M`, :math:`N \\times M \\times L`
+            or :math:`N \\times M \\times L \\times K`
+        max_root (int):
+            Maximum number of Lanczos iterations to perform
+            in prediction stage
+        num_batches (int):
+            Number of batches for splitting the Xtest array
+            (for large datasets, you may not have enough GPU memory
+            to process the entire dataset at once)
         """
-        if kwargs.get("Xtest") is not None:
-            self.Xtest = gprutils.prepare_test_data(kwargs.get("Xtest"))
+        if Xtest is None and self.Xtest is None:
+            warnings.warn(
+                "No test data provided. Using training data for prediction",
+                UserWarning)
+            self.Xtest = self.X
+        elif Xtest is not None:
+            self.Xtest = gprutils.prepare_test_data(Xtest)
+            self.fulldims = Xtest.shape[1:]
             if next(self.model.parameters()).is_cuda:
                 self.Xtest = self.Xtest.cuda()
         if kwargs.get("num_batches") is not None:
@@ -181,38 +214,66 @@ class skreconstructor:
         self.likelihood.eval()
         batch_range = len(self.Xtest) // self.num_batches
         mean = np.zeros((self.Xtest.shape[0]))
-        if self.calculate_sd:
-            sd = np.zeros((self.Xtest.shape[0]))
-        if self.calculate_sd:
-            print('Calculating predictive mean and uncertainty...')
-        else:
-            print('Calculating predictive mean...')
+        sd = np.zeros((self.Xtest.shape[0]))
+        print('Calculating predictive mean and uncertainty...')
         for i in range(self.num_batches):
             print("\rBatch {}/{}".format(i+1, self.num_batches), end="")
             Xtest_i = self.Xtest[i*batch_range:(i+1)*batch_range]
             with torch.no_grad(), gpytorch.settings.fast_pred_var(), self.toeplitz, self.maxroot:
                 covar_i = self.likelihood(self.model(Xtest_i))
-            mean[i*batch_range:(i+1)*batch_range] = covar_i.mean.cpu().numpy()
-            if self.calculate_sd:
-                sd[i*batch_range:(i+1)*batch_range] = covar_i.stddev.cpu().numpy()
+            mean[i*batch_range:(i+1)*batch_range] = covar_i.mean.detach().cpu().numpy()
+            sd[i*batch_range:(i+1)*batch_range] = covar_i.stddev.detach().cpu().numpy()
         print("\nDone")
-        if self.calculate_sd:
-            return (mean, sd)
-        return mean
+        return mean, sd
 
     def run(self):
         """
         Combines train and step methods
         """
         self.train()
-        prediction = self.predict()
+        mean, sd = self.predict()
         if next(self.model.parameters()).is_cuda:
             self.model.cpu()
             torch.set_default_tensor_type(torch.DoubleTensor)
             self.X, self.y = self.X.cpu(), self.y.cpu()
             self.Xtest = self.Xtest.cpu()
             torch.cuda.empty_cache()
-        return prediction, self.hyperparams
+        return mean, sd, self.hyperparams
+
+    def step(self, dist_edge=0, **kwargs):
+        """
+        Performs single train-predict step for exploration analysis
+        returning a new point with maximum uncertainty. Notice that
+        it doesn't seem to work properly with structred kernel interpolation
+        and therefore it may work only for when total number of data points
+        is below 5e4 (in this case we use a full GP without structured kernel)
+
+        Args:
+            dist_edge (integer or list with two integers):
+                edge regions not considered in max uncertainty evaluation
+            **learning_rate (float):
+                learning rate for GP regression model training
+            **steps (int):
+                number of SVI training iteratons
+
+        Returns:
+            lists of indices and values for points with maximum uncertainty,
+            predictive mean and standard deviation (as flattened numpy arrays)
+        """
+        if kwargs.get("learning_rate") is not None:
+            self.learning_rate = kwargs.get("learning_rate")
+        if kwargs.get("iterations") is not None:
+            self.iterations = kwargs.get("iterations")
+        if isinstance(dist_edge, int):
+            dist_edge = [dist_edge, dist_edge]
+        # train a model
+        self.train(learning_rate=self.learning_rate, iterations=self.iterations)
+        # make prediction
+        mean, sd = self.predict()
+        # find point with maximum uncertainty
+        sd_ = sd.reshape(self.fulldims)
+        amax, uncert_list = gprutils.max_uncertainty(sd_, dist_edge)
+        return amax, uncert_list, mean, sd
 
 
 class skgprmodel(gpytorch.models.ExactGP):
@@ -238,17 +299,19 @@ class skgprmodel(gpytorch.models.ExactGP):
     """
 
     def __init__(self, X, y, kernel, likelihood,
-                 input_dim=3, grid_points_ratio=1.):
+                 input_dim=3, grid_points_ratio=1.,
+                 do_ski=False):
         """
         Initializes model parameters
         """
         super(skgprmodel, self).__init__(X, y, likelihood)
-        grid_size = gpytorch.utils.grid.choose_grid_size(
-            X, ratio=grid_points_ratio)
         self.mean_module = gpytorch.means.ConstantMean()
-        scaled_kernel = gpytorch.kernels.ScaleKernel(kernel)
-        self.covar_module = gpytorch.kernels.GridInterpolationKernel(
-            scaled_kernel, grid_size=grid_size, num_dims=input_dim)
+        self.covar_module = gpytorch.kernels.ScaleKernel(kernel)
+        if do_ski:
+            grid_size = gpytorch.utils.grid.choose_grid_size(
+                X, ratio=grid_points_ratio)
+            self.covar_module = gpytorch.kernels.GridInterpolationKernel(
+                self.covar_module, grid_size=grid_size, num_dims=input_dim)
 
     def forward(self, x):
         """
@@ -274,8 +337,6 @@ def get_kernel(kernel_type, input_dim, on_gpu=True, **kwargs):
             Determines lower (1st list) and upper (2nd list) bounds
             for kernel lengthscale(s);
             number of elements in each list is equal to the input dimensions
-        **lengthscale_init (list with float):
-            Initializes lenghtscale at this value
     Returns:
         kernel object
     """
@@ -305,7 +366,4 @@ def get_kernel(kernel_type, input_dim, on_gpu=True, **kwargs):
         print('Select one of the currently available kernels:',\
               '"RBF", "Matern52"')
         raise
-    lscale_init = kwargs.get('lengthscale_init')
-    if None not in (lscale, lscale_init):
-        kernel.lengthscale = torch.tensor(lscale_init)
     return kernel
