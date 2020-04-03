@@ -1,13 +1,10 @@
 '''
 skgpr.py
 ======
-
 Gaussian process regression model with a structured kernel interpolation.
-
 Serves as a high-level wrapper for GPyTorch's (https://gpytorch.ai)
 Gaussian processes module with a structred kernel interpolation method
 for easy work with scientific image (2D) and hyperspectral (3D, 4D) data.
-
 Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
 '''
 
@@ -22,7 +19,6 @@ class skreconstructor:
     """
     GP regression model with structured kernel interpolation
     for 2D/3D/4D image data reconstruction
-
     Args:
         X (ndarray):
             Grid indices with dimension :math:`c \\times N \\times M`,
@@ -86,8 +82,7 @@ class skreconstructor:
                  calculate_sd=0,
                  use_gpu=1,
                  verbose=0,
-                 seed=0,
-                 patience=20):
+                 seed=0):
         """
         Initiates reconstructor parameters
         and pre-processes training and test data arrays
@@ -120,7 +115,6 @@ class skreconstructor:
         if use_gpu:
             self.model.cuda()
         self.iterations = iterations
-        self.patience = patience
         self.num_batches = num_batches
         self.calculate_sd = calculate_sd
         self.lr = learning_rate
@@ -142,23 +136,12 @@ class skreconstructor:
             [{'params': self.model.parameters()}], lr=self.lr)
         mll = gpytorch.mlls.ExactMarginalLogLikelihood(
             self.likelihood, self.model)
-        if self.verbose:
-            print('Model training...')
+        print('Model training...')
         start_time = time.time()
-        loss_register = np.zeros(self.iterations+1)
-        loss_register[0] = 1e+5
-        bad_epochs = 0
         for i in range(self.iterations):
             optimizer.zero_grad()
             output = self.model(self.X)
             loss = -mll(output, self.y)
-            loss_register[i+1] = loss.item()
-            if ( (loss_register[i]-loss_register[i+1]) < (1e-5*np.abs(loss_register[i])) ):
-                bad_epochs += 1
-            if bad_epochs == self.patience:
-                if self.verbose:
-                    print("The training is stopped at {} iterations due to bad epochs".format(i))
-                break
             loss.backward()
             optimizer.step()
             self.lscales.append(
@@ -171,16 +154,15 @@ class skreconstructor:
                       'loss: {} ...'.format(np.around(loss.item(), 4)),
                       'length: {} ...'.format(np.around(self.lscales[-1], 4)),
                       'noise: {} ...'.format(np.around(self.noise_all[-1], 7)))
-            if self.verbose and i == 10:
+            if i == 10:
                 print('average time per iteration: {} s'.format(
                     np.round(time.time() - start_time, 2) / 10))
-        if self.verbose:
-            print('training completed in {} s'.format(
-                np.round(time.time() - start_time, 2)))
-            print('Final parameter values:\n',
-                  'lengthscale: {}, noise: {}'.format(
-                    np.around(self.lscales[-1], 4),
-                    np.around(self.noise_all[-1], 7)))
+        print('training completed in {} s'.format(
+            np.round(time.time() - start_time, 2)))
+        print('Final parameter values:\n',
+              'lengthscale: {}, noise: {}'.format(
+                np.around(self.lscales[-1], 4),
+                np.around(self.noise_all[-1], 7)))
         return
 
     def predict(self, **kwargs):
@@ -201,21 +183,19 @@ class skreconstructor:
         mean = np.zeros((self.Xtest.shape[0]))
         if self.calculate_sd:
             sd = np.zeros((self.Xtest.shape[0]))
-        if self.calculate_sd and self.verbose:
+        if self.calculate_sd:
             print('Calculating predictive mean and uncertainty...')
-        elif not self.calculate_sd and self.verbose:
+        else:
             print('Calculating predictive mean...')
         for i in range(self.num_batches):
-            if self.verbose:
-                print("\rBatch {}/{}".format(i+1, self.num_batches), end="")
+            print("\rBatch {}/{}".format(i+1, self.num_batches), end="")
             Xtest_i = self.Xtest[i*batch_range:(i+1)*batch_range]
             with torch.no_grad(), gpytorch.settings.fast_pred_var(), self.toeplitz, self.maxroot:
                 covar_i = self.likelihood(self.model(Xtest_i))
             mean[i*batch_range:(i+1)*batch_range] = covar_i.mean.cpu().numpy()
             if self.calculate_sd:
                 sd[i*batch_range:(i+1)*batch_range] = covar_i.stddev.cpu().numpy()
-        if self.verbose:
-            print("\nDone")
+        print("\nDone")
         if self.calculate_sd:
             return (mean, sd)
         return mean
@@ -238,7 +218,6 @@ class skreconstructor:
 class skgprmodel(gpytorch.models.ExactGP):
     """
     GP regression model with structured kernel interpolation
-
     Args:
         X (ndarray):
             Grid indices with dimension :math:`n \\times c`,
@@ -283,7 +262,6 @@ class skgprmodel(gpytorch.models.ExactGP):
 def get_kernel(kernel_type, input_dim, on_gpu=True, **kwargs):
     """
     Initializes one of the following kernels: RBF, Matern
-
     Args:
         kernel_type (str):
             Kernel type ('RBF', Matern52')
