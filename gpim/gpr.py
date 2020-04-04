@@ -287,7 +287,7 @@ class reconstructor:
         mean_ = mean.reshape(self.fulldims)
         vals, inds = gprutils.acquisition(
             mean_, sd_, acquisition_function,
-            lscale, batch_size, batch_update)
+            batch_size, batch_update, lscale)
         return vals, inds, mean, sd
 
 
