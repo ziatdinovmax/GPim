@@ -82,7 +82,6 @@ def acquisition(mean, sd, acquisition_function=None, lscale=0, batch_size=None):
         indices_list.append(amax_idx)
         vals_list.append(acq.max())
         acq[tuple(amax_idx)] = acq.min() - 1
-        
     if batch_size is None:
         batch_size = len(sd.flatten())
     indices_list, vals_list = next_batch(
@@ -106,7 +105,7 @@ def next_batch(acqfunc_values, indices, lscale, batch_size):
             kernel lengthscale
         batch_size (int):
             number of points to return
-    
+
     Returns:
         Tuple with computed indices and corresponding values
     """
