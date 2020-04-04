@@ -331,14 +331,21 @@ def get_sparse_grid(R):
         X = X_true.copy().reshape(2, e1*e2)
         X[:, np.where(np.isnan((R.flatten())))] = np.nan
         X = X.reshape(2, e1, e2)
-    elif np.ndim(R) == 3:
+    elif np.ndim(R) == 3 and not np.isnan(R[..., -1]).any():
         e1, e2, e3 = R.shape
         X = X_true.copy().reshape(3, e1*e2, e3)
         indices = np.where(np.isnan((R.reshape(e1*e2, e3))))[0]
         X[:, indices] = np.nan
         X = X.reshape(3, e1, e2, e3)
+    elif np.ndim(R) == 3 and np.isnan(R[..., -1]).any():
+        e1, e2, e3 = R.shape
+        X = X_true.copy().reshape(3, e1*e2*e3)
+        indices = np.where(np.isnan((R.reshape(e1*e2*e3))))[0]
+        X[:, indices] = np.nan
+        X = X.reshape(3, e1, e2, e3)
     else:
-        raise NotImplementedError("Currently supports only 2D and 3D sets")
+        raise NotImplementedError(
+            "Currently supports only 2D and 3D sets with sparsity in xy and xyz dims")
     return X
 
 
