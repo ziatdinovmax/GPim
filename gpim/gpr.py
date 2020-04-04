@@ -285,7 +285,7 @@ class reconstructor:
         vals, inds = gprutils.acquisition(
             mean_, sd_, acquisition_function,
             lscale, batch_size)
-        return inds, vals, mean, sd
+        return vals, inds, mean, sd
 
 
 def get_kernel(kernel_type, input_dim, lengthscale, use_gpu=False, **kwargs):
