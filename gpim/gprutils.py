@@ -84,7 +84,7 @@ def acquisition(mean, sd, acquisition_function=None, lscale=0, batch_size=None):
         acq[tuple(amax_idx)] = acq.min() - 1
     if batch_size is None:
         batch_size = len(sd.flatten())
-    indices_list, vals_list = next_batch(
+    vals_list, indices_list = next_batch(
         np.array(vals_list), np.vstack(indices_list),
         lscale, batch_size)
 
