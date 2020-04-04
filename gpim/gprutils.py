@@ -11,6 +11,7 @@ Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
 import os
 import copy
 import numpy as np
+from scipy import spatial
 import torch
 from torch.distributions import transform_to, constraints
 import pyro
@@ -18,10 +19,29 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 
-def acquisistion(mean, sd, acquisition_function=None):
+def acquisition2d(mean, sd, acquisition_function=None, lscale=0, batch_size=None):
+    """
+    Takes GP-predicted mean and standard deviation (sd)
+    and computes the next query points for 2D datasets
+    and 3D datasets where mean and sd can be summed along
+    the 3rd dimension (e.g. hyperspectral :math:`f(x, y, E)`
+    measurements with sparsity in spatial (*xy*) domain only)
+    """
+    if np.ndim(sd) > 3 or np.ndim(mean) > 3:
+        raise AssertionError("Inputs should be 2D or 3D")
+    if np.ndim(sd) == 3:
+        sd = np.sum(sd, axis=-1)
+    if np.ndim(mean) == 3:
+        mean = np.sum(mean, axis=-1)
+    vals_list, indices_list = acquisition(
+        mean, sd, acquisition_function=None, lscale=0, batch_size=None)
+    return vals_list, indices_list
+
+
+def acquisition(mean, sd, acquisition_function=None, lscale=0, batch_size=None):
     """
     Takes GP-predicted mean and standard deviation
-    and calculates an acquisition function
+    and computes a batch of the next query points
 
     Args:
         mean (ndarray)
@@ -39,6 +59,10 @@ def acquisistion(mean, sd, acquisition_function=None):
             applies some math operation to them
             (e.g. :math:`\\upmu - 2 \\times \\upsigma`)
             and returns the result
+        lscale (float):
+            kernel lengthscale
+        batch_size (int):
+            number of points to return
 
     Returns:
         Indices and values of the points with the largest values
@@ -48,18 +72,59 @@ def acquisistion(mean, sd, acquisition_function=None):
         sd = np.sum(sd, axis=-1)
     if np.ndim(mean) == 3:
         mean = np.sum(mean, axis=-1)
-    amax_list, uncert_list = [], []
+    indices_list, vals_list = [], []
     if acquisition_function is None:
         acq = sd
     else:
         acq = acquisition_function(mean, sd)
     for i in range(len(sd.flatten())):
-        amax = [i[0] for i in np.where(acq == acq.max())]
-        amax_list.append(amax)
-        uncert_list.append(acq.max())
-        acq[amax[0], amax[1]] = acq.min() - 1
+        amax_idx = [i[0] for i in np.where(acq == acq.max())]
+        indices_list.append(amax_idx)
+        vals_list.append(acq.max())
+        acq[tuple(amax_idx)] = acq.min() - 1
+        
+    if batch_size is None:
+        batch_size = len(sd.flatten())
+    indices_list, vals_list = next_batch(
+        np.array(vals_list), np.vstack(indices_list),
+        lscale, batch_size)
 
-    return amax_list, uncert_list
+    return vals_list, indices_list
+
+
+def next_batch(acqfunc_values, indices, lscale, batch_size):
+    """
+    Returns a batch of query points whose separation distance
+    is determined by kernel lengthscale
+    Args:
+        acqfunc_values (ndarray):
+            (*N*,) numpy array with values of acquisition function
+        indices (ndarray):
+            (*N*, *c*) numpy array with corresponding indices,
+            where c ia a number of dimensions of the dataset
+        lscale (float):
+            kernel lengthscale
+        batch_size (int):
+            number of points to return
+    
+    Returns:
+        Tuple with computed indices and corresponding values
+    """
+    minval = acqfunc_values.min()
+    new_max = acqfunc_values.max()
+    new_max_id = np.argmax(acqfunc_values)
+    max_val_all, max_id_all = [], []
+    ck = indices[new_max_id]
+    tree = spatial.cKDTree(indices)
+    while new_max > minval - 1:
+        max_val_all.append(new_max)
+        max_id_all.append(new_max_id)
+        nn_indices = tree.query_ball_point(ck, lscale)
+        acqfunc_values[nn_indices] = minval - 1
+        new_max = acqfunc_values.max()
+        new_max_id = np.argmax(acqfunc_values)
+        ck = indices[new_max_id]
+    return max_val_all[:batch_size], indices[max_id_all[:batch_size]]
 
 
 def mask_edges(imgdata, dist_edge):

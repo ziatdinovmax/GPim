@@ -245,11 +245,22 @@ class reconstructor:
             torch.cuda.empty_cache()
         return mean, sd, self.hyperparams
 
-    def step(self, acquisition_function=None, **kwargs):
+    def step(self, acquisition_function=None,
+             lscale=None, batch_size=None,
+             **kwargs):
         """
         Performs single train-predict step for exploration analysis
         returning a new point with maximum uncertainty
         Args:
+            acquisition_function (python function):
+                Function that takes two parameters, mean and sd,
+                applies some math operation to them
+                (e.g. :math:`\\upmu - 2 \\times \\upsigma`)
+            lscale (float):
+                lengthscale determining the separation (euclidean)
+                distance between query points
+            batch_size (int):
+                number of query points to return  
             **learning_rate (float):
                 learning rate for GP regression model training
             **steps (int):
@@ -262,6 +273,8 @@ class reconstructor:
             self.learning_rate = kwargs.get("learning_rate")
         if kwargs.get("iterations") is not None:
             self.iterations = kwargs.get("iterations")
+        if lscale is None:
+            lscale = self.model.kernel.lengthscale.mean().item()
         # train a model
         self.train(learning_rate=self.learning_rate, iterations=self.iterations)
         # make prediction
@@ -269,9 +282,10 @@ class reconstructor:
         # find point with maximum uncertainty
         sd_ = sd.reshape(self.fulldims)
         mean_ = mean.reshape(self.fulldims)
-        amax, uncert_list = gprutils.acquisistion(
-            mean_, sd_, acquisition_function)
-        return amax, uncert_list, mean, sd
+        vals, inds = gprutils.acquisition2d(
+            mean_, sd_, acquisition_function,
+            lscale, batch_size)
+        return inds, vals, mean, sd
 
 
 def get_kernel(kernel_type, input_dim, lengthscale, use_gpu=False, **kwargs):
