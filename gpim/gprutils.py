@@ -38,7 +38,9 @@ def acquisition2d(mean, sd, acquisition_function=None, lscale=0, batch_size=None
     return vals_list, indices_list
 
 
-def acquisition(mean, sd, acquisition_function=None, lscale=0, batch_size=None):
+def acquisition(mean, sd,
+                acquisition_function=None, batch_size=100,
+                batch_update=False, lscale=0):
     """
     Takes GP-predicted mean and standard deviation
     and computes a batch of the next query points
@@ -59,39 +61,39 @@ def acquisition(mean, sd, acquisition_function=None, lscale=0, batch_size=None):
             applies some math operation to them
             (e.g. :math:`\\upmu - 2 \\times \\upsigma`)
             and returns the result
-        lscale (float):
-            kernel lengthscale
         batch_size (int):
-            number of points to return
+                Number of query points to return
+        batch_update:
+            Filters the query points based on the specified lengthscale
+        lscale (float):
+            Lengthscale determining the separation (euclidean)
+            distance between query points. Defaults to the kernel
+            lengthscale
 
     Returns:
         Indices and values of the points with the largest values
         of acquisition function
     """
-    if np.ndim(sd) == 3:
-        sd = np.sum(sd, axis=-1)
-    if np.ndim(mean) == 3:
-        mean = np.sum(mean, axis=-1)
     indices_list, vals_list = [], []
     if acquisition_function is None:
         acq = sd
     else:
         acq = acquisition_function(mean, sd)
-    for i in range(len(sd.flatten())):
+    for i in range(batch_size):
         amax_idx = [i[0] for i in np.where(acq == acq.max())]
         indices_list.append(amax_idx)
         vals_list.append(acq.max())
         acq[tuple(amax_idx)] = acq.min() - 1
-    if batch_size is None:
-        batch_size = len(sd.flatten())
+    if not batch_update:
+        return vals_list, indices_list
     vals_list, indices_list = next_batch(
-        np.array(vals_list), np.vstack(indices_list),
-        lscale, batch_size)
-
+        np.array(vals_list),
+        np.vstack(indices_list),
+        lscale)
     return vals_list, indices_list
 
 
-def next_batch(acqfunc_values, indices, lscale, batch_size):
+def next_batch(acqfunc_values, indices, lscale):
     """
     Returns a batch of query points whose separation distance
     is determined by kernel lengthscale
@@ -103,8 +105,6 @@ def next_batch(acqfunc_values, indices, lscale, batch_size):
             where c ia a number of dimensions of the dataset
         lscale (float):
             kernel lengthscale
-        batch_size (int):
-            number of points to return
 
     Returns:
         Tuple with computed indices and corresponding values
@@ -123,7 +123,7 @@ def next_batch(acqfunc_values, indices, lscale, batch_size):
         new_max = acqfunc_values.max()
         new_max_id = np.argmax(acqfunc_values)
         ck = indices[new_max_id]
-    return max_val_all[:batch_size], indices[max_id_all[:batch_size]]
+    return max_val_all, indices[max_id_all].tolist()
 
 
 def mask_edges(imgdata, dist_edge):

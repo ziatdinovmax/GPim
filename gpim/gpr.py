@@ -246,27 +246,30 @@ class reconstructor:
         return mean, sd, self.hyperparams
 
     def step(self, acquisition_function=None,
-             lscale=None, batch_size=None,
-             **kwargs):
+             batch_size=100, batch_update=False,
+             lscale=None, **kwargs):
         """
         Performs single train-predict step for exploration analysis
-        returning a new point with maximum uncertainty
+        returning a new point with maximum value of acquisition function
         Args:
             acquisition_function (python function):
                 Function that takes two parameters, mean and sd,
-                applies some math operation to them
+                and applies some math operation to them
                 (e.g. :math:`\\upmu - 2 \\times \\upsigma`)
-            lscale (float):
-                lengthscale determining the separation (euclidean)
-                distance between query points
             batch_size (int):
-                number of query points to return  
+                Number of query points to return
+            batch_update:
+                Filters the query points based on the specified lengthscale
+            lscale (float):
+                Lengthscale determining the separation (euclidean)
+                distance between query points. Defaults to the kernel
+                lengthscale
             **learning_rate (float):
-                learning rate for GP regression model training
+                Learning rate for GP regression model training
             **steps (int):
-                number of SVI training iteratons
+                Number of SVI training iteratons
         Returns:
-            lists of indices and values for points with maximum uncertainty,
+            Lists of indices and values for points with maximum uncertainty,
             predictive mean and standard deviation (as flattened numpy arrays)
         """
         if kwargs.get("learning_rate") is not None:
@@ -284,7 +287,7 @@ class reconstructor:
         mean_ = mean.reshape(self.fulldims)
         vals, inds = gprutils.acquisition(
             mean_, sd_, acquisition_function,
-            lscale, batch_size)
+            lscale, batch_size, batch_update)
         return vals, inds, mean, sd
 
 
