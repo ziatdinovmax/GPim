@@ -282,7 +282,7 @@ class reconstructor:
         # find point with maximum uncertainty
         sd_ = sd.reshape(self.fulldims)
         mean_ = mean.reshape(self.fulldims)
-        vals, inds = gprutils.acquisition2d(
+        vals, inds = gprutils.acquisition(
             mean_, sd_, acquisition_function,
             lscale, batch_size)
         return inds, vals, mean, sd
