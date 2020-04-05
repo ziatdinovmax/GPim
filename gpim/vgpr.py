@@ -10,7 +10,7 @@ Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
 import time
 import numpy as np
 from gpim import gprutils
-import gpim.kernels as kernels
+from gpim.kernels import gpytorch_kernels
 import torch
 import gpytorch
 import warnings
@@ -107,7 +107,7 @@ class vreconstructor:
         else:
             torch.set_default_tensor_type(torch.DoubleTensor)
         self.likelihood = gpytorch.likelihoods.MultitaskGaussianLikelihood(num_tasks)
-        _kernel = kernels.gpytorch_kernels.get_kernel(
+        _kernel = gpytorch_kernels.get_kernel(
             kernel, input_dim, use_gpu, lengthscale=lengthscale)
 
         if not independent:
