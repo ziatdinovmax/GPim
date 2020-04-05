@@ -20,6 +20,7 @@ class skreconstructor:
     """
     GP regression model with structured kernel interpolation
     for 2D/3D/4D image data reconstruction
+
     Args:
         X (ndarray):
             Grid indices with dimension :math:`c \\times N \\times M`,
@@ -46,7 +47,7 @@ class skreconstructor:
             for kernel lengthscales. The number of elements in each list
             is equal to the dataset dimensionality.
         sparse (bool):
-            Perform structured kernel interpolation GP
+            Perform structured kernel interpolation GP. Set to True by default.
         iterations (int):
             Number of training steps
         learning_rate (float):
@@ -73,7 +74,7 @@ class skreconstructor:
                  Xtest=None,
                  kernel='RBF',
                  lengthscale=None,
-                 sparse=False,
+                 sparse=True,
                  learning_rate=.1,
                  iterations=50,
                  use_gpu=1,

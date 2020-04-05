@@ -21,10 +21,11 @@ import warnings
 
 class reconstructor:
     """
-    Class for Gaussian process (GP) regression-based reconstuction
-    of sparse 2D image and 3D spectroscopic datasets,
-    and sample exploration with hyperspectral measurements
-    based on maximal uncertainty reduction.
+    Class for Gaussian process-based reconstuction
+    of sparse 2D images and 3D spectroscopic datasets,
+    and exploration/explotaition routines for the selection
+    of next query point.
+
     Args:
         X (ndarray):
             Grid indices with dimensions :math:`c \\times N \\times M`
