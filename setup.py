@@ -5,7 +5,7 @@ __maintainer__ = "Maxim Ziatdinov"
 __email__ = "maxim.ziatdinov@ai4microcopy.com"
 __date__ = "02/18/2019"
 
-from setuptools import setup
+from setuptools import setup, find_packages
 import os
 
 module_dir = os.path.dirname(os.path.abspath(__file__))
@@ -21,7 +21,7 @@ if __name__ == "__main__":
         author='Maxim Ziatdinov',
         author_email='maxim.ziatdinov@ai4microcopy.com',
         license='MIT license',
-        packages=['gpim'],
+        packages=find_packages(include=['gpim', 'gpim.']),
         zip_safe=False,
         install_requires=[
             'numpy>=1.16.5',
