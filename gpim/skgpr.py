@@ -10,7 +10,7 @@ Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
 
 import time
 import numpy as np
-import gpim.kernels.gpytorch_kernels as gpytorch_kernels
+from gpim import kernels
 from gpim import gprutils
 import torch
 import gpytorch

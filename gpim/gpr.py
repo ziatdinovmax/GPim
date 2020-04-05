@@ -11,8 +11,8 @@ Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
 
 import time
 import numpy as np
-import gpim.kernels.pyro_kernels as pyro_kernels
-import gpim.gprutils as gprutils
+from gpim import kernels
+from gpim import gprutils
 import torch
 import pyro
 import pyro.contrib.gp as gp
@@ -104,7 +104,7 @@ class reconstructor:
         if lengthscale is None:
             lengthscale = [[0. for l in range(input_dim)],
                            [np.mean(y.shape) / 2 for l in range(input_dim)]]
-        kernel = pyro_kernels.get_kernel(
+        kernel = kernels.pyro_kernels.get_kernel(
             kernel, input_dim, lengthscale, use_gpu,
             amplitude=kwargs.get('amplitude'))
         if Xtest is not None:
