@@ -3,7 +3,7 @@ vgpr.py
 ======
 Gaussian process regression model for vector-valued functions.
 Serves as a high-level wrapper for GPyTorch's (https://gpytorch.ai)
-Gaussian processes module with correlated and independent output dimensions.
+Gaussian processes with correlated and independent output dimensions.
 Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
 '''
 
