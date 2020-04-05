@@ -18,8 +18,8 @@ import warnings
 
 class vreconstructor:
     """
-    GP regression model with structured kernel interpolation
-    for 2D/3D/4D image data reconstruction
+    Multi-output GP regression model for vector-valued
+    2D/3D/4D functions
 
     Args:
         X (ndarray):
