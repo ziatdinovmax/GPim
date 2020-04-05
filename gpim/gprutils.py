@@ -212,7 +212,7 @@ def do_measurement(R_true, X_true, R, X, uncertmax, measure):
     return R, X
 
 
-def prepare_training_data(X, y):
+def prepare_training_data(X, y, vector_valued=False):
     """
     Reshapes and converts data to torch tensors for GP analysis
 
@@ -234,7 +234,11 @@ def prepare_training_data(X, y):
     tor = lambda n: torch.from_numpy(n)
     X = X.reshape(X.shape[0], np.product(X.shape[1:])).T
     X = tor(X[~np.isnan(X).any(axis=1)])
-    y = tor(y.flatten()[~np.isnan(y.flatten())])
+    if vector_valued:
+        y = y.reshape(np.product(y.shape[:-1]), y.shape[-1])
+        y = tor(y[~np.isnan(y).any(axis=1)])
+    else:
+        y = tor(y.flatten()[~np.isnan(y.flatten())])
 
     return X, y
 
