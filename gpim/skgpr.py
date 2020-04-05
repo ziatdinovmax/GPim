@@ -240,40 +240,56 @@ class skreconstructor:
             torch.cuda.empty_cache()
         return mean, sd, self.hyperparams
 
-    def step(self, dist_edge=0, **kwargs):
+    def step(self, acquisition_function=None,
+             batch_size=100, batch_update=False,
+             lscale=None, **kwargs):
         """
-        Performs single train-predict step for exploration analysis
-        returning a new point with maximum uncertainty. Notice that
-        it doesn't seem to work properly with structred kernel interpolation
-        and therefore it may work only for when total number of data points
-        is below 5e4 (in this case we use a full GP without structured kernel)
+        Performs single train-predict step and computes next query point with
+        maximum value of acquisition function. Notice that it doesn't seem to
+        work properly with a structred kernel.
 
         Args:
-            dist_edge (integer or list with two integers):
-                edge regions not considered in max uncertainty evaluation
+            acquisition_function (python function):
+                Function that takes two parameters, mean and sd,
+                and applies some math operation to them
+                (e.g. :math:`\\upmu - 2 \\times \\upsigma`)
+            batch_size (int):
+                Number of query points to return
+            batch_update:
+                Filters the query points based on the specified lengthscale
+            lscale (float):
+                Lengthscale determining the separation (euclidean)
+                distance between query points. Defaults to the kernel
+                lengthscale
             **learning_rate (float):
-                learning rate for GP regression model training
+                Learning rate for GP regression model training
             **steps (int):
-                number of SVI training iteratons
-
+                Number of SVI training iteratons
         Returns:
-            lists of indices and values for points with maximum uncertainty,
+            Lists of indices and values for points with maximum uncertainty,
             predictive mean and standard deviation (as flattened numpy arrays)
+        
         """
+        if self.do_ski:
+            raise NotImplementedError(
+        "The Bayesian optimization routines are not available for structured kernel")
         if kwargs.get("learning_rate") is not None:
             self.learning_rate = kwargs.get("learning_rate")
         if kwargs.get("iterations") is not None:
             self.iterations = kwargs.get("iterations")
-        if isinstance(dist_edge, int):
-            dist_edge = [dist_edge, dist_edge]
+        if lscale is None:
+            lscale = self.model.covar_module.base_kernel.lengthscale.mean().item()
         # train a model
         self.train(learning_rate=self.learning_rate, iterations=self.iterations)
         # make prediction
         mean, sd = self.predict()
-        # find point with maximum uncertainty
+        # find point with maximum value of acquisition function
         sd_ = sd.reshape(self.fulldims)
-        amax, uncert_list = gprutils.max_uncertainty(sd_, dist_edge)
-        return amax, uncert_list, mean, sd
+        mean_ = mean.reshape(self.fulldims)
+        vals, inds = gprutils.acquisition(
+            mean_, sd_, acquisition_function,
+            batch_size, batch_update, lscale)
+        return vals, inds, mean, sd
 
 
 class skgprmodel(gpytorch.models.ExactGP):
