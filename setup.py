@@ -21,7 +21,7 @@ if __name__ == "__main__":
         author='Maxim Ziatdinov',
         author_email='maxim.ziatdinov@ai4microcopy.com',
         license='MIT license',
-        packages=find_packages(include=['gpim', 'gpim.']),
+        packages=find_packages(include=['gpim', 'gpim.*']),
         zip_safe=False,
         install_requires=[
             'numpy>=1.16.5',
