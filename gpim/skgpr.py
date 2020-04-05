@@ -10,7 +10,7 @@ Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
 
 import time
 import numpy as np
-from gpim import kernels
+import gpim.kernels as kernels
 from gpim import gprutils
 import torch
 import gpytorch
@@ -110,7 +110,7 @@ class skreconstructor:
         else:
             torch.set_default_tensor_type(torch.DoubleTensor)
         self.likelihood = gpytorch.likelihoods.GaussianLikelihood()
-        _kernel = gpytorch_kernels.get_kernel(
+        _kernel = kernels.gpytorch_kernels.get_kernel(
             kernel, input_dim, use_gpu, lengthscale=lengthscale)
         grid_points_ratio = kwargs.get("grid_points_ratio", 1.)
         self.model = skgprmodel(self.X, self.y,

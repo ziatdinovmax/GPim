@@ -11,7 +11,7 @@ Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
 
 import time
 import numpy as np
-from gpim import kernels
+import gpim.kernels as kernels
 from gpim import gprutils
 import torch
 import pyro
