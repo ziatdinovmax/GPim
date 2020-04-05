@@ -10,6 +10,7 @@ Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
 
 import time
 import numpy as np
+from gpim.kernels import gpytorch_kernels
 from gpim import gprutils
 import torch
 import gpytorch
@@ -109,8 +110,8 @@ class skreconstructor:
         else:
             torch.set_default_tensor_type(torch.DoubleTensor)
         self.likelihood = gpytorch.likelihoods.GaussianLikelihood()
-        _kernel = get_kernel(kernel, input_dim,
-                             use_gpu, lengthscale=lengthscale)
+        _kernel = gpytorch_kernels.get_kernel(
+            kernel, input_dim, use_gpu, lengthscale=lengthscale)
         grid_points_ratio = kwargs.get("grid_points_ratio", 1.)
         self.model = skgprmodel(self.X, self.y,
                                 _kernel, self.likelihood, input_dim,
@@ -338,49 +339,3 @@ class skgprmodel(gpytorch.models.ExactGP):
         covar_x = self.covar_module(x)
         return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
 
-
-def get_kernel(kernel_type, input_dim, on_gpu=True, **kwargs):
-    """
-    Initializes one of the following kernels: RBF, Matern
-    Args:
-        kernel_type (str):
-            Kernel type ('RBF', Matern52')
-        input_dim (int):
-            Number of input dimensions
-            (equal to number of feature vector columns)
-        on_gpu (bool):
-            Sets default tensor type to torch.cuda.DoubleTensor
-        **lengthscale (list of two lists):
-            Determines lower (1st list) and upper (2nd list) bounds
-            for kernel lengthscale(s);
-            number of elements in each list is equal to the input dimensions
-    Returns:
-        kernel object
-    """
-    if on_gpu and torch.cuda.is_available():
-        torch.set_default_tensor_type(torch.cuda.DoubleTensor)
-    else:
-        torch.set_default_tensor_type(torch.DoubleTensor)
-
-    lscale = kwargs.get('lengthscale')
-    if lscale is not None:
-        lscale = gpytorch.constraints.Interval(torch.tensor(lscale[0]),
-                                               torch.tensor(lscale[1]))
-    # initialize the kernel
-    kernel_book = lambda input_dim, lscale: {
-        'RBF': gpytorch.kernels.RBFKernel(
-            ard_num_dims=input_dim,
-            lengthscale_constraint=lscale
-            ),
-        'Matern52': gpytorch.kernels.MaternKernel(
-            ard_num_dims=input_dim,
-            lengthscale_constraint=lscale
-            )
-    }
-    try:
-        kernel = kernel_book(input_dim, lscale)[kernel_type]
-    except KeyError:
-        print('Select one of the currently available kernels:',\
-              '"RBF", "Matern52"')
-        raise
-    return kernel
