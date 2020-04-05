@@ -30,8 +30,9 @@ class vreconstructor:
             (for example, for xyz coordinates, *c* = 3)
         y (ndarray):
             Observations (data points) with dimension :math:`N \\times M`,
-            :math:`N \\times M \\times L` or
-            :math:`N \\times M \\times L \\times K`.
+            :math:`N \\times M \\times L \\times d` or
+            :math:`N \\times M \\times L \\times K \\times d`,
+            where d is a number of output dimensions.
             Typically, for 2D image *N* and *M* are image height and width.
             For 3D hyperspectral data *N* and *M* are spatial dimensions
             and *L* is a "spectroscopic" dimension (e.g. voltage or wavelength).
