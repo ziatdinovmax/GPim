@@ -84,4 +84,3 @@ def get_kernel(kernel_type, input_dim, lengthscale, use_gpu=False, **kwargs):
         )
 
     return kernel
-    

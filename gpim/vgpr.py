@@ -108,14 +108,14 @@ class vreconstructor:
         self.likelihood = gpytorch.likelihoods.MultitaskGaussianLikelihood(num_tasks)
         _kernel = get_kernel(kernel, input_dim,
                              use_gpu, lengthscale=lengthscale)
-        
+
         if not independent:
             self.model = vgprmodel(self.X, self.y,
                                     _kernel, self.likelihood, num_tasks)
         else:
             self.model = ivgprmodel(self.X, self.y,
                                     _kernel, self.likelihood, num_tasks)
-            
+
         if use_gpu:
             self.model.cuda()
         self.iterations = iterations

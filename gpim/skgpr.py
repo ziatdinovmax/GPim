@@ -270,7 +270,7 @@ class skreconstructor:
         Returns:
             Lists of indices and values for points with maximum uncertainty,
             predictive mean and standard deviation (as flattened numpy arrays)
-        
+
         """
         if self.do_ski:
             raise NotImplementedError(
