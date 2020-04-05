@@ -282,7 +282,7 @@ class reconstructor:
         self.train(learning_rate=self.learning_rate, iterations=self.iterations)
         # make prediction
         mean, sd = self.predict()
-        # find point with maximum uncertainty
+        # find point with maximum value of acquisition function
         sd_ = sd.reshape(self.fulldims)
         mean_ = mean.reshape(self.fulldims)
         vals, inds = gprutils.acquisition(
