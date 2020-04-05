@@ -251,6 +251,7 @@ class reconstructor:
         """
         Performs single train-predict step for exploration analysis
         returning a new point with maximum value of acquisition function
+        
         Args:
             acquisition_function (python function):
                 Function that takes two parameters, mean and sd,
