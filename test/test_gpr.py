@@ -1,7 +1,8 @@
 import numpy as np
 import pytest
 from numpy.testing import assert_
-from gpim import gpr, gprutils
+from gpim.gpreg import gpr
+from gpim import gprutils
 np.random.seed(0)
 
 
