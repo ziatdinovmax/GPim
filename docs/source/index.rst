@@ -10,7 +10,7 @@ Welcome to GPim's documentation!
    License <license_link>
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 3
    :caption: Package Content
 
    gpreg
