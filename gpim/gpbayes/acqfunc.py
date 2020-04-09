@@ -26,7 +26,7 @@ def confidence_bound(gpmodel, X_full, **kwargs):
     """
     alpha = kwargs.get("alpha", 0)
     beta = kwargs.get("beta", 1)
-    mean, sd = gpmodel.predict(X_full)
+    mean, sd = gpmodel.predict(X_full, verbose=0)
     return alpha * mean + beta * sd
 
 
@@ -47,7 +47,7 @@ def expected_improvement(gpmodel, X_full, X_sparse, **kwargs):
     """
     xi = kwargs.get("xi", 0.01)
     mean, sd = gpmodel.predict(X_full)
-    mean_sample, _ = gpmodel.predict(X_sparse)
+    mean_sample, _ = gpmodel.predict(X_sparse, verbose=0)
 
     mean_sample_opt = np.nanmax(mean_sample)
     imp = mean - mean_sample_opt - xi
