@@ -80,6 +80,15 @@ class boptimizer:
         iterations (int): Number of SVI training iteratons for GP model
         seed (int):
             for reproducibility
+        **alpha (float or int):
+            alpha coefficient in the 'confidence bound' acquisition function
+            (Default: 0)
+        **beta (float or int):
+            beta coefficient in the 'confidence bound' acquisition function
+            (Default: 1)
+        **xi (float): 
+            xi coefficient in 'expected improvement'
+            and 'probability of improvement' acquisition functions
         **use_gpu (bool):
             Uses GPU hardware accelerator when set to 'True'.
             Notice that for large datasets training model without GPU
@@ -136,9 +145,9 @@ class boptimizer:
         self.exploration_steps = exploration_steps
         self.batch_update = batch_update
         self.batch_size = batch_size
-        self.alpha = kwargs.get("alpha", None)
-        self.beta = kwargs.get("beta", None)
-        self.xi = kwargs.get("xi", None)
+        self.alpha = kwargs.get("alpha", 0)
+        self.beta = kwargs.get("beta", 1)
+        self.xi = kwargs.get("xi", 0.01)
         self.lscale = kwargs.get("lscale", None)
         self.indices_all, self.vals_all = [], []
         self.target_func_vals_all = [y_seed.copy()]
