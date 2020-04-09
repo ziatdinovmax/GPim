@@ -162,7 +162,7 @@ class boptimizer:
             X_sparse_new, y_sparse_new = X_sparse_new.cuda(), y_sparse_new.cuda()
         self.surrogate_model.model.X = X_sparse_new
         self.surrogate_model.model.y = y_sparse_new
-        self.surrogate_model.train()
+        self.surrogate_model.train(verbose=self.verbose)
         return
 
     def evaluate_function(self, indices):
@@ -310,5 +310,5 @@ class boptimizer:
         for i in range(self.exploration_steps):
             self.single_step(i)
         if self.verbose:
-            print("Exploration completed")
+            print("\nExploration completed")
         return self.indices_all, self.target_func_vals_all
