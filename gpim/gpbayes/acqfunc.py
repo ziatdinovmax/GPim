@@ -46,7 +46,7 @@ def expected_improvement(gpmodel, X_full, X_sparse, **kwargs):
             xi constant value
     """
     xi = kwargs.get("xi", 0.01)
-    mean, sd = gpmodel.predict(X_full)
+    mean, sd = gpmodel.predict(X_full, verbose=0)
     mean_sample, _ = gpmodel.predict(X_sparse, verbose=0)
 
     mean_sample_opt = np.nanmax(mean_sample)
@@ -71,8 +71,8 @@ def probability_of_improvement(gpmodel, X_full, X_sparse, **kwargs):
             xi constant value
     """
     xi = kwargs.get("xi", 0.01)
-    mean, sd = gpmodel.predict(X_full)
-    mean_sample = gpmodel.predict(X_sparse)
+    mean, sd = gpmodel.predict(X_full, verbose=0)
+    mean_sample = gpmodel.predict(X_sparse, verbose=0)
 
     mean_sample_opt = np.nanmax(mean_sample)
     z = mean - mean_sample_opt - xi
