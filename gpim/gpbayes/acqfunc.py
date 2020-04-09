@@ -24,10 +24,8 @@ def confidence_bound(gpmodel, X_full, **kwargs):
         **beta (float):
             :math:`\\beta` coefficient in :math:`\\alpha \\mu + \\beta \\sigma`
     """
-    if kwargs.get("alpha") is None:
-        alpha = 0
-    if kwargs.get("beta") is None:
-        beta = 1
+    alpha = kwargs.get("alpha", 0)
+    beta = kwargs.get("beta", 1)
     mean, sd = gpmodel.predict(X_full)
     return alpha * mean + beta * sd
 
@@ -47,8 +45,7 @@ def expected_improvement(gpmodel, X_full, X_sparse, **kwargs):
         **xi (float):
             xi constant value
     """
-    if kwargs.get("xi") is None:
-        xi = 0.01
+    xi = kwargs.get("xi", 0.01)
     mean, sd = gpmodel.predict(X_full)
     mean_sample, _ = gpmodel.predict(X_sparse)
 
@@ -73,8 +70,7 @@ def probability_of_improvement(gpmodel, X_full, X_sparse, **kwargs):
         **xi (float):
             xi constant value
     """
-    if kwargs.get("xi") is None:
-        xi = 0.01
+    xi = kwargs.get("xi", 0.01)
     mean, sd = gpmodel.predict(X_full)
     mean_sample = gpmodel.predict(X_sparse)
 
