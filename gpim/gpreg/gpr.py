@@ -159,6 +159,8 @@ class reconstructor:
             self.learning_rate = kwargs.get("learning_rate")
         if kwargs.get("iterations") is not None:
             self.iterations = kwargs.get("iterations")
+        if kwargs.get("verbose") is not None:
+            self.verbose = kwargs.get("verbose")
         pyro.clear_param_store()
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
         loss_fn = pyro.infer.Trace_ELBO().differentiable_loss
@@ -194,7 +196,7 @@ class reconstructor:
                     np.around(self.model.noise.item(), 7)))
         return
 
-    def predict(self, Xtest=None):
+    def predict(self, Xtest=None, **kwargs):
         """
         Uses trained GP regression model to make predictions
         Args:
@@ -216,6 +218,8 @@ class reconstructor:
             self.fulldims = Xtest.shape[1:]
             if next(self.model.parameters()).is_cuda:
                 self.Xtest = self.Xtest.cuda()
+        if kwargs.get("verbose") is not None:
+            self.verbose = kwargs.get("verbose")
         if self.verbose:
             print("Calculating predictive mean and variance...", end=" ")
         with torch.no_grad():

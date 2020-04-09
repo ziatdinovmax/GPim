@@ -145,6 +145,8 @@ class skreconstructor:
             self.learning_rate = kwargs.get("learning_rate")
         if kwargs.get("iterations") is not None:
             self.iterations = kwargs.get("iterations")
+        if kwargs.get("verbose") is not None:
+            self.verbose = kwargs.get("verbose")
         self.model.train()
         self.likelihood.train()
         optimizer = torch.optim.Adam(
@@ -214,6 +216,8 @@ class skreconstructor:
             self.fulldims = Xtest.shape[1:]
             if next(self.model.parameters()).is_cuda:
                 self.Xtest = self.Xtest.cuda()
+        if kwargs.get("verbose") is not None:
+            self.verbose = kwargs.get("verbose")
         if kwargs.get("num_batches") is not None:
             self.num_batches = kwargs.get("num_batches")
         if kwargs.get("max_root") is not None:
