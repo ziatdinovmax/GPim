@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.abspath('../../'))
 
 autodoc_mock_imports = [
     'torch', 'pyro', 'pyro.contrib.gp', 'pyro.distributions',
-    'gpytorch'
+    'gpytorch', 'scipy'
 ]
 
 # -- Project information -----------------------------------------------------
@@ -71,6 +71,9 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
+
+# do not prepend module name to functions
+add_module_names = False
 
 
 # -- Options for HTML output -------------------------------------------------
