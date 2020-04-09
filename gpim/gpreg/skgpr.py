@@ -94,6 +94,10 @@ class skreconstructor:
             torch.backends.cudnn.benchmark = False
             torch.set_default_tensor_type(torch.cuda.DoubleTensor)
         input_dim = np.ndim(y)
+        if Xtest is not None:
+            self.fulldims = Xtest.shape[1:]
+        else:
+            self.fulldims = X.shape[1:]
         X, y = gprutils.prepare_training_data(X, y)
         if Xtest is not None:
             Xtest = gprutils.prepare_test_data(Xtest)
