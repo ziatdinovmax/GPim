@@ -71,7 +71,7 @@ gpim.utils.plot_kernel_hyperparams(hyperparams)
 
 ### Running GPim notebooks in the cloud
 
-1) Executable Google Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/dev/examples/notebooks/GP_2D3D_images.ipynb) with the example of applying GP to sparse spiral 2D scans in piezoresponse force microscopy (PFM) and hyperspectral 3D data in Band Excitation PFM.
+1) Executable Google Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/examples/notebooks/GP_2D3D_images.ipynb) with the example of applying GP to sparse spiral 2D scans in piezoresponse force microscopy (PFM) and hyperspectral 3D data in Band Excitation PFM.
 2) Executable Google Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/examples/notebooks/GP_TD_cKPFM.ipynb) with the example of applying GP to 4D spectroscopic dataset for smoothing and resolution enhancement in contact Kelvin Probe Force Microscopy (cKPFM)
 3) Simple example of performing GP-based exploration-exploitation on a toy dataset- TBA 
 
