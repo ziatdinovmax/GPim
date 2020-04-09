@@ -13,6 +13,6 @@ Welcome to GPim's documentation!
    :maxdepth: 3
    :caption: Package Content
 
-   gpr
-   skgpr
+   gpreg
+   gpbayes
    gprutils
