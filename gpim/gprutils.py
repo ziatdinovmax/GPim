@@ -146,7 +146,7 @@ def mask_edges(imgdata, dist_edge):
     return imgdata * mask
 
 
-def checkvalues(uncert_idx_list, uncert_idx_all, uncert_val_list):
+def checkvalues(uncert_idx_list, uncert_idx_all, uncert_val_list, verbose=True):
     """
     Checks if the indices were already used
     (helps not to get stuck in one point during GP-based sample exploration)
@@ -167,15 +167,18 @@ def checkvalues(uncert_idx_list, uncert_idx_all, uncert_val_list):
         Otherwise, returns the next/closest value from the list.
     """
     _idx = 0
-    print('Acquisition function value {} at {}'.format(
-        uncert_val_list[_idx], uncert_idx_list[_idx]))
+    if verbose:
+        print('Acquisition function value {} at {}'.format(
+            uncert_val_list[_idx], uncert_idx_list[_idx]))
     if len(uncert_idx_all) == 0:
         return uncert_idx_list[_idx], uncert_val_list[_idx]
     while 1 in [1 for a in uncert_idx_all if a == uncert_idx_list[_idx]]:
-        print("Finding the next max point...")
+        if verbose:
+            print("Finding the next max point...")
         _idx = _idx + 1
-        print('Acquisition function value {} at {}'.format(
-            uncert_val_list[_idx], uncert_idx_list[_idx]))
+        if verbose:
+            print('Acquisition function value {} at {}'.format(
+                uncert_val_list[_idx], uncert_idx_list[_idx]))
     return uncert_idx_list[_idx], uncert_val_list[_idx]
 
 

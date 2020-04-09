@@ -1,4 +1,5 @@
 from gpim import gprutils as utils
-from gpim.gpr import reconstructor
-from gpim.skgpr import skreconstructor
-from gpim.vgpr import vreconstructor
+from gpim.gpreg.gpr import reconstructor
+from gpim.gpreg.skgpr import skreconstructor
+from gpim.gpreg.vgpr import vreconstructor
+from gpim.gpbayes.boptim import boptimizer

@@ -1,25 +1,26 @@
 '''
-vgpr.py
+skgpr.py
 ======
-Gaussian process regression model for vector-valued functions.
+Gaussian process regression model with a structured kernel interpolation.
 Serves as a high-level wrapper for GPyTorch's (https://gpytorch.ai)
-Gaussian processes with correlated and independent output dimensions.
+Gaussian processes module with a structred kernel interpolation method
+for easy work with scientific image (2D) and hyperspectral (3D, 4D) data.
 Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
 '''
 
 import time
 import numpy as np
+from gpim.kernels import gpytorch_kernels
 from gpim import gprutils
-from gpim.imkernels import gpytorch_kernels
 import torch
 import gpytorch
 import warnings
 
 
-class vreconstructor:
+class skreconstructor:
     """
-    Multi-output GP regression model for vector-valued
-    2D/3D/4D functions.
+    GP regression model with structured kernel interpolation
+    for 2D/3D/4D image data reconstruction
 
     Args:
         X (ndarray):
@@ -30,9 +31,8 @@ class vreconstructor:
             (for example, for xyz coordinates, *c* = 3)
         y (ndarray):
             Observations (data points) with dimension :math:`N \\times M`,
-            :math:`N \\times M \\times L \\times d` or
-            :math:`N \\times M \\times L \\times K \\times d`,
-            where d is a number of output dimensions.
+            :math:`N \\times M \\times L` or
+            :math:`N \\times M \\times L \\times K`.
             Typically, for 2D image *N* and *M* are image height and width.
             For 3D hyperspectral data *N* and *M* are spatial dimensions
             and *L* is a "spectroscopic" dimension (e.g. voltage or wavelength).
@@ -47,18 +47,20 @@ class vreconstructor:
             Determines lower (1st list) and upper (2nd list) bounds
             for kernel lengthscales. The number of elements in each list
             is equal to the dataset dimensionality.
-        independent (bool):
-            Indicates whether output dimensions are independent or correlated
+        sparse (bool):
+            Perform structured kernel interpolation GP. Set to True by default.
         iterations (int):
             Number of training steps
         learning_rate (float):
             Learning rate for model training
         use_gpu (bool):
             Uses GPU hardware accelerator when set to 'True'
-        verbose (bool):
-            Print statistics after each training iteration
+        verbose (int):
+            Level of verbosity (0, 1, or 2)
         seed (int):
             for reproducibility
+        **grid_points_ratio (float):
+            Ratio of inducing points to overall points
         **max_root (int):
             Maximum number of Lanczos iterations to perform
             in prediction stage
@@ -73,11 +75,11 @@ class vreconstructor:
                  Xtest=None,
                  kernel='RBF',
                  lengthscale=None,
-                 independent=False,
+                 sparse=True,
                  learning_rate=.1,
                  iterations=50,
                  use_gpu=1,
-                 verbose=0,
+                 verbose=1,
                  seed=0,
                  **kwargs):
         """
@@ -91,12 +93,12 @@ class vreconstructor:
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
             torch.set_default_tensor_type(torch.cuda.DoubleTensor)
-        input_dim = np.ndim(y) - 1
-        X, y = gprutils.prepare_training_data(X, y, vector_valued=True)
-        num_tasks = y.shape[-1]
+        input_dim = np.ndim(y)
+        X, y = gprutils.prepare_training_data(X, y)
         if Xtest is not None:
             Xtest = gprutils.prepare_test_data(Xtest)
         self.X, self.y, self.Xtest = X, y, Xtest
+        self.do_ski = sparse
         self.toeplitz = gpytorch.settings.use_toeplitz(True)
         maxroot = kwargs.get("maxroot", 100)
         self.maxroot = gpytorch.settings.max_root_decomposition_size(maxroot)
@@ -107,23 +109,19 @@ class vreconstructor:
             self.toeplitz = gpytorch.settings.use_toeplitz(False)
         else:
             torch.set_default_tensor_type(torch.DoubleTensor)
-        self.likelihood = gpytorch.likelihoods.MultitaskGaussianLikelihood(num_tasks)
+        self.likelihood = gpytorch.likelihoods.GaussianLikelihood()
         _kernel = gpytorch_kernels.get_kernel(
             kernel, input_dim, use_gpu, lengthscale=lengthscale)
-
-        if not independent:
-            self.model = vgprmodel(self.X, self.y,
-                                    _kernel, self.likelihood, num_tasks)
-        else:
-            self.model = ivgprmodel(self.X, self.y,
-                                    _kernel, self.likelihood, num_tasks)
-
+        grid_points_ratio = kwargs.get("grid_points_ratio", 1.)
+        self.model = skgprmodel(self.X, self.y,
+                                _kernel, self.likelihood, input_dim,
+                                grid_points_ratio, self.do_ski)
         if use_gpu:
             self.model.cuda()
         self.iterations = iterations
         self.num_batches = kwargs.get("num_batches", 1)
         self.learning_rate = learning_rate
-        self.independent = independent
+
         self.lscales, self.noise_all = [], []
         self.hyperparams = {
             "lengthscale": self.lscales,
@@ -149,7 +147,8 @@ class vreconstructor:
             [{'params': self.model.parameters()}], lr=self.learning_rate)
         mll = gpytorch.mlls.ExactMarginalLogLikelihood(
             self.likelihood, self.model)
-        print('Model training...')
+        if self.verbose:
+            print('Model training...')
         start_time = time.time()
         for i in range(self.iterations):
             optimizer.zero_grad()
@@ -157,28 +156,31 @@ class vreconstructor:
             loss = -mll(output, self.y)
             loss.backward()
             optimizer.step()
-            if not self.independent:
+            if not self.do_ski:
                 self.lscales.append(
-                    self.model.covar_module.data_covar_module.lengthscale.tolist()[0])
+                    self.model.covar_module.base_kernel.lengthscale.tolist()[0]
+                )
             else:
                 self.lscales.append(
-                    self.model.covar_module.base_kernel.lengthscale.tolist()[0])
+                    self.model.covar_module.base_kernel.base_kernel.lengthscale.tolist()[0]
+                )
             self.noise_all.append(
-                self.model.likelihood.noise_covar.noise.tolist())
-            if self.verbose and (i % 10 == 0 or i == self.iterations - 1):
+                self.model.likelihood.noise_covar.noise.item())
+            if self.verbose == 2 and (i % 10 == 0 or i == self.iterations - 1):
                 print('iter: {} ...'.format(i),
                       'loss: {} ...'.format(np.around(loss.item(), 4)),
                       'length: {} ...'.format(np.around(self.lscales[-1], 4)),
                       'noise: {} ...'.format(np.around(self.noise_all[-1], 7)))
-            if i == 10:
+            if self.verbose and i == 10:
                 print('average time per iteration: {} s'.format(
                     np.round(time.time() - start_time, 2) / 10))
-        print('training completed in {} s'.format(
-            np.round(time.time() - start_time, 2)))
-        print('Final parameter values:\n',
-              'lengthscale: {}, noise: {}'.format(
-                np.around(self.lscales[-1], 4),
-                np.around(self.noise_all[-1], 7)))
+        if self.verbose:
+            print('training completed in {} s'.format(
+                np.round(time.time() - start_time, 2)))
+            print('Final parameter values:\n',
+                'lengthscale: {}, noise: {}'.format(
+                    np.around(self.lscales[-1], 4),
+                    np.around(self.noise_all[-1], 7)))
         return
 
     def predict(self, Xtest=None, **kwargs):
@@ -187,16 +189,16 @@ class vreconstructor:
 
         Args:
             Xtest (ndarray):
-            "Test" points (for prediction with a trained GP model)
-            with dimension :math:`N \\times M`, :math:`N \\times M \\times L`
-            or :math:`N \\times M \\times L \\times K`
-        max_root (int):
-            Maximum number of Lanczos iterations to perform
-            in prediction stage
-        num_batches (int):
-            Number of batches for splitting the Xtest array
-            (for large datasets, you may not have enough GPU memory
-            to process the entire dataset at once)
+                "Test" points (for prediction with a trained GP model)
+                with dimension :math:`N \\times M`, :math:`N \\times M \\times L`
+                or :math:`N \\times M \\times L \\times K`
+            max_root (int):
+                Maximum number of Lanczos iterations to perform
+                in prediction stage
+            num_batches (int):
+                Number of batches for splitting the Xtest array
+                (for large datasets, you may not have enough GPU memory
+                to process the entire dataset at once)
         """
         if Xtest is None and self.Xtest is None:
             warnings.warn(
@@ -212,25 +214,25 @@ class vreconstructor:
             self.num_batches = kwargs.get("num_batches")
         if kwargs.get("max_root") is not None:
             self.max_root = kwargs.get("max_root")
-        n_samples = kwargs.get("n_samples", 100)
         self.model.eval()
         self.likelihood.eval()
         batch_range = len(self.Xtest) // self.num_batches
-        mean = np.zeros((self.Xtest.shape[0], self.y.shape[-1]))
-        sd = np.zeros((self.Xtest.shape[0], self.y.shape[-1]))
-        print('Calculating predictive mean and uncertainty...')
+        mean = np.zeros((self.Xtest.shape[0]))
+        sd = np.zeros((self.Xtest.shape[0]))
+        if self.verbose:
+            print('Calculating predictive mean and uncertainty...')
         for i in range(self.num_batches):
-            print("\rBatch {}/{}".format(i+1, self.num_batches), end="")
+            if self.verbose:
+                print("\rBatch {}/{}".format(i+1, self.num_batches), end="")
             Xtest_i = self.Xtest[i*batch_range:(i+1)*batch_range]
             with torch.no_grad(), gpytorch.settings.fast_pred_var(), self.toeplitz, self.maxroot:
                 covar_i = self.likelihood(self.model(Xtest_i))
-            samples = torch.cat([covar_i.rsample() for _ in range(n_samples)])
-            samples = samples.reshape(n_samples, Xtest_i.shape[0], self.y.shape[1])
-            mean_i = torch.mean(samples, dim=0)
-            sd_i = torch.sqrt(torch.var(samples, dim=0))
-            mean[i*batch_range:(i+1)*batch_range] = mean_i.detach().cpu().numpy()
-            sd[i*batch_range:(i+1)*batch_range] = sd_i.detach().cpu().numpy()
-        print("\nDone")
+            mean[i*batch_range:(i+1)*batch_range] = covar_i.mean.detach().cpu().numpy()
+            sd[i*batch_range:(i+1)*batch_range] = covar_i.stddev.detach().cpu().numpy()
+        sd = sd.reshape(self.fulldims)
+        mean = mean.reshape(self.fulldims)
+        if self.verbose:
+            print("\nDone")
         return mean, sd
 
     def run(self):
@@ -247,12 +249,61 @@ class vreconstructor:
             torch.cuda.empty_cache()
         return mean, sd, self.hyperparams
 
+    def step(self, acquisition_function=None,
+             batch_size=100, batch_update=False,
+             lscale=None, **kwargs):
+        """
+        Performs single train-predict step and computes next query point with
+        maximum value of acquisition function. Notice that it doesn't seem to
+        work properly with a structred kernel.
 
-class vgprmodel(gpytorch.models.ExactGP):
+        Args:
+            acquisition_function (python function):
+                Function that takes two parameters, mean and sd,
+                and applies some math operation to them
+                (e.g. :math:`\\upmu - 2 \\times \\upsigma`)
+            batch_size (int):
+                Number of query points to return
+            batch_update:
+                Filters the query points based on the specified lengthscale
+            lscale (float):
+                Lengthscale determining the separation (euclidean)
+                distance between query points. Defaults to the kernel
+                lengthscale
+            **learning_rate (float):
+                Learning rate for GP regression model training
+            **steps (int):
+                Number of SVI training iteratons
+        Returns:
+            Lists of indices and values for points with maximum uncertainty,
+            predictive mean and standard deviation (as flattened numpy arrays)
+
+        """
+        if self.do_ski:
+            raise NotImplementedError(
+        "The Bayesian optimization routines are not available for structured kernel")
+        if kwargs.get("learning_rate") is not None:
+            self.learning_rate = kwargs.get("learning_rate")
+        if kwargs.get("iterations") is not None:
+            self.iterations = kwargs.get("iterations")
+        if lscale is None:
+            lscale = self.model.covar_module.base_kernel.lengthscale.mean().item()
+        # train a model
+        self.train(learning_rate=self.learning_rate, iterations=self.iterations)
+        # make prediction
+        mean, sd = self.predict()
+        # find point with maximum value of acquisition function
+        sd_ = sd.reshape(self.fulldims)
+        mean_ = mean.reshape(self.fulldims)
+        vals, inds = gprutils.acquisition(
+            mean_, sd_, acquisition_function,
+            batch_size, batch_update, lscale)
+        return vals, inds, mean, sd
+
+
+class skgprmodel(gpytorch.models.ExactGP):
     """
-    GP regression model for vector-valued functions
-    with correlated output dimensions
-
+    GP regression model with structured kernel interpolation
     Args:
         X (ndarray):
             Grid indices with dimension :math:`n \\times c`,
@@ -260,60 +311,38 @@ class vgprmodel(gpytorch.models.ExactGP):
             and *c* is equal to the number of coordinates
             (for example, for xyz coordinates, *c* = 3)
         y (ndarray):
-            Observations (data points) with dimension
-            :math:`n \\times d`, where d is number of
-            the function components
+            Observations (data points) with dimension n
         kernel (gpytorch kernel object):
             'RBF' or 'Matern52' kernels
         likelihood (gpytorch likelihood object):
             The Gaussian likelihood
-        num_tasks (int):
-            Number of tasks (equal to number of outputs)
+        input_dim (int):
+            Number of input dimensions
+            (equal to number of feature vector columns)
+        grid_points_ratio (float):
+            Ratio of inducing points to overall points
     """
-    def __init__(self, X, y, kernel, likelihood, num_tasks):
-        super(vgprmodel, self).__init__(X, y, likelihood)
-        self.mean_module = gpytorch.means.MultitaskMean(
-            gpytorch.means.ConstantMean(), num_tasks)
-        self.covar_module = gpytorch.kernels.MultitaskKernel(kernel, num_tasks)
+
+    def __init__(self, X, y, kernel, likelihood,
+                 input_dim=3, grid_points_ratio=1.,
+                 do_ski=False):
+        """
+        Initializes model parameters
+        """
+        super(skgprmodel, self).__init__(X, y, likelihood)
+        self.mean_module = gpytorch.means.ConstantMean()
+        self.covar_module = gpytorch.kernels.ScaleKernel(kernel)
+        if do_ski:
+            grid_size = gpytorch.utils.grid.choose_grid_size(
+                X, ratio=grid_points_ratio)
+            self.covar_module = gpytorch.kernels.GridInterpolationKernel(
+                self.covar_module, grid_size=grid_size, num_dims=input_dim)
 
     def forward(self, x):
+        """
+        Forward path
+        """
         mean_x = self.mean_module(x)
         covar_x = self.covar_module(x)
-        return gpytorch.distributions.MultitaskMultivariateNormal(mean_x, covar_x)
+        return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
 
-
-class ivgprmodel(gpytorch.models.ExactGP):
-    """
-    GP regression model for vector-valued functions
-    with independent output dimensions
-
-    Args:
-        X (ndarray):
-            Grid indices with dimension :math:`n \\times c`,
-            where *n* is the number of observation points
-            and *c* is equal to the number of coordinates
-            (for example, for xyz coordinates, *c* = 3)
-        y (ndarray):
-            Observations (data points) with dimension
-            :math:`n \\times d`, where d is number of
-            the function components
-        kernel (gpytorch kernel object):
-            'RBF' or 'Matern52' kernels
-        likelihood (gpytorch likelihood object):
-            The Gaussian likelihood
-        num_tasks (int):
-            Number of tasks (equal to number of outputs)
-    """
-    def __init__(self, X, y, kernel, likelihood, num_tasks):
-        super(ivgprmodel, self).__init__(X, y, likelihood)
-        self.mean_module = gpytorch.means.ConstantMean(
-            batch_shape=torch.Size([num_tasks]))
-        kernel.batch_shape = torch.Size([num_tasks])
-        self.covar_module = gpytorch.kernels.ScaleKernel(
-            kernel, batch_shape=torch.Size([num_tasks]))
-
-    def forward(self, x):
-        mean_x = self.mean_module(x)
-        covar_x = self.covar_module(x)
-        return gpytorch.distributions.MultitaskMultivariateNormal.from_batch_mvn(
-            gpytorch.distributions.MultivariateNormal(mean_x, covar_x))

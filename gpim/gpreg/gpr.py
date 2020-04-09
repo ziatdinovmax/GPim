@@ -1,7 +1,7 @@
 '''
 gpr.py
 ======
-Sparse Gaussian process regression:
+Gaussian process regression:
 model training, prediction and uncertainty exploration
 This module serves as a high-level wrapper for sparse Gaussian processes module
 from Pyro probabilistic programming library (https://pyro.ai/)
@@ -11,7 +11,7 @@ Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
 
 import time
 import numpy as np
-from gpim.imkernels import pyro_kernels
+from gpim.kernels import pyro_kernels
 from gpim import gprutils
 import torch
 import pyro
@@ -49,6 +49,8 @@ class reconstructor:
             the kernel will have only one lenghtscale, even if the dataset
             is multi-dimensional. For lists of two lists, the number of elements
             in each list must be equal to the dataset dimensionality.
+        sparse (bool):
+            Perform sparse GP regression when set to True.
         indpoints (int):
             Number of inducing points for SparseGPRegression.
             Defaults to total_number_of_points // 10.
@@ -59,12 +61,10 @@ class reconstructor:
             Uses GPU hardware accelerator when set to 'True'.
             Notice that for large datasets training model without GPU
             is extremely slow.
-        verbose (bool):
-            Prints training statistics after each 100th training iteration
+        verbose (int):
+            Level of verbosity (0, 1, or 2)
         seed (int):
             for reproducibility
-        **sparse (bool):
-            Perform sparse GP regression in all cases
         **amplitude (float): kernel variance or amplitude squared
     """
     def __init__(self,
@@ -78,13 +78,14 @@ class reconstructor:
                  learning_rate=5e-2,
                  iterations=1000,
                  use_gpu=False,
-                 verbose=False,
+                 verbose=1,
                  seed=0,
                  **kwargs):
         """
         Initiates reconstructor parameters
         and pre-processes training and test data arrays
         """
+        self.verbose = verbose
         torch.manual_seed(seed)
         pyro.set_rng_seed(seed)
         pyro.clear_param_store()
@@ -129,7 +130,8 @@ class reconstructor:
             else:
                 indpoints = len(self.X) if indpoints > len(self.X) else indpoints
             Xu = self.X[::len(self.X) // indpoints]
-            print("# of inducing points for sparse GP regression: {}".format(len(Xu)))
+            if self.verbose == 2:
+                print("# of inducing points for sparse GP regression: {}".format(len(Xu)))
             self.model = gp.models.SparseGPRegression(
                 self.X, self.y, kernel, Xu, jitter=1.0e-5)
         if use_gpu:
@@ -145,7 +147,6 @@ class reconstructor:
             "variance": self.amp_all,
             "inducing_points": self.indpoints_all
             }
-        self.verbose = verbose
 
     def train(self, **kwargs):
         """
@@ -162,7 +163,8 @@ class reconstructor:
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
         loss_fn = pyro.infer.Trace_ELBO().differentiable_loss
         start_time = time.time()
-        print('Model training...')
+        if self.verbose:
+            print('Model training...')
         for i in range(self.iterations):
             optimizer.zero_grad()
             loss = loss_fn(self.model.model, self.model.guide)
@@ -173,35 +175,36 @@ class reconstructor:
             self.noise_all.append(self.model.noise.item())
             if self.do_sparse:
                 self.indpoints_all.append(self.model.Xu.detach().cpu().numpy())
-            if self.verbose and (i % 100 == 0 or i == self.iterations - 1):
+            if self.verbose == 2 and (i % 100 == 0 or i == self.iterations - 1):
                 print('iter: {} ...'.format(i),
                       'loss: {} ...'.format(np.around(loss.item(), 4)),
                       'amp: {} ...'.format(np.around(self.amp_all[-1], 4)),
                       'length: {} ...'.format(np.around(self.lscales[-1], 4)),
                       'noise: {} ...'.format(np.around(self.noise_all[-1], 7)))
-            if i == 100:
+            if i == 100 and self.verbose:
                 print('average time per iteration: {} s'.format(
                     np.round(time.time() - start_time, 2) / 100))
-        print('training completed in {} s'.format(
-            np.round(time.time() - start_time, 2)))
-        print('Final parameter values:\n',
-              'amp: {}, lengthscale: {}, noise: {}'.format(
-                np.around(self.model.kernel.variance_map.item(), 4),
-                np.around(self.model.kernel.lengthscale_map.tolist(), 4),
-                np.around(self.model.noise.item(), 7)))
+        if self.verbose:
+            print('training completed in {} s'.format(
+                np.round(time.time() - start_time, 2)))
+            print('Final parameter values:\n',
+                'amp: {}, lengthscale: {}, noise: {}'.format(
+                    np.around(self.model.kernel.variance_map.item(), 4),
+                    np.around(self.model.kernel.lengthscale_map.tolist(), 4),
+                    np.around(self.model.noise.item(), 7)))
         return
 
     def predict(self, Xtest=None):
         """
-        Use trained GP regression model to make predictions
+        Uses trained GP regression model to make predictions
         Args:
             Xtest (ndarray):
-            "Test" points (for prediction with a trained GP model)
-            with dimensions :math:`N \\times M` or :math:`N \\times M \\times L`.
-            Uses Xtest from __init__ by default. If Xtest is None,
-            uses training data X.
+                "Test" points (for prediction with a trained GP model)
+                with dimensions :math:`N \\times M` or :math:`N \\times M \\times L`.
+                Uses Xtest from __init__ by default. If Xtest is None,
+                uses training data X.
         Returns:
-            Predictive mean and variance
+            Predictive mean and standard deviation
         """
         if Xtest is None and self.Xtest is None:
             warnings.warn(
@@ -213,11 +216,17 @@ class reconstructor:
             self.fulldims = Xtest.shape[1:]
             if next(self.model.parameters()).is_cuda:
                 self.Xtest = self.Xtest.cuda()
-        print("Calculating predictive mean and variance...", end=" ")
+        if self.verbose:
+            print("Calculating predictive mean and variance...", end=" ")
         with torch.no_grad():
             mean, cov = self.model(self.Xtest, full_cov=False, noiseless=False)
-        print("Done")
-        return mean.cpu().numpy(), cov.sqrt().cpu().numpy()
+        mean = mean.cpu().numpy()
+        sd = cov.sqrt().cpu().numpy()
+        mean = mean.reshape(self.fulldims)
+        sd = sd.reshape(self.fulldims)
+        if self.verbose:
+            print("Done")
+        return mean, sd
 
     def run(self, **kwargs):
         """
@@ -228,7 +237,7 @@ class reconstructor:
             **steps (int):
                 number of SVI training iteratons
         Returns:
-            Predictive mean and SD as flattened ndarrays and
+            Predictive mean, standard deviation and
             dictionary with hyperparameters evolution
             as a function of SVI steps
         """
