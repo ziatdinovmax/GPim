@@ -12,15 +12,6 @@ Data preprocessing
 .. autofunction:: gpim.gprutils.corrupt_image2d
 .. autofunction:: gpim.gprutils.corrupt_image3d
 
-
-
-Uncertainty-based exploration
------------------------------
-.. autofunction:: gpim.gprutils.max_uncertainty
-.. autofunction:: gpim.gprutils.do_measurement
-.. autofunction:: gpim.gprutils.checkvalues
-
-
 Vizualization
 -------------
 .. autofunction:: gpim.gprutils.plot_kernel_hyperparams
