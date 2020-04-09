@@ -31,6 +31,6 @@ def test_gpr_2d(kernel):  # sanity check only, due to comput cost
         kernel=kernel, learning_rate=0.1,
         iterations=2, use_gpu=False,
         verbose=False).run()
-    assert_(mean.shape == sd.shape == R.flatten().shape)
+    assert_(mean.shape == sd.shape == R.shape)
     assert_(not np.isnan(mean).any())
     assert_(not np.isnan(sd).any())
