@@ -14,5 +14,3 @@ Welcome to GPim's documentation!
    :caption: Package Content
 
    gpreg
-   gpbayes
-   gprutils
