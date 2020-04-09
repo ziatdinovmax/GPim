@@ -4,6 +4,7 @@ GP for 2D-4D images
 Full and sparse GP
 ------------------------------------------------
 .. automodule:: gpim.gpreg.gpr
+    :members:
 
 .. autoclass:: gpim.gpreg.gpr.reconstructor
     :members:
@@ -13,6 +14,7 @@ Full and sparse GP
 GP with structred kernel interpolation
 ---------------------------------------------------
 .. automodule:: gpim.gpreg.skgpr
+    :members:
 
 .. autoclass:: gpim.gpreg.skgpr.skreconstructor
     :members:
@@ -24,9 +26,10 @@ GP with structred kernel interpolation
     :undoc-members:
     :member-order: bysource
     
- GP for vector-valued functions
+GP for vector-valued functions
 ----------------------------------------------------
 .. automodule:: gpim.gpreg.vgpr
+    :members:
 
 .. autoclass:: gpim.gpreg.vgpr.vreconstructor
     :members:
