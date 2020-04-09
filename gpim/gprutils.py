@@ -11,6 +11,7 @@ Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
 import os
 import copy
 import numpy as np
+from scipy import spatial
 import torch
 from torch.distributions import transform_to, constraints
 import pyro
@@ -18,10 +19,31 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 
-def acquisistion(mean, sd, acquisition_function=None):
+def acquisition2d(mean, sd, acquisition_function=None, lscale=0, batch_size=None):
+    """
+    Takes GP-predicted mean and standard deviation (sd)
+    and computes the next query points for 2D datasets
+    and 3D datasets where mean and sd can be summed along
+    the 3rd dimension (e.g. hyperspectral :math:`f(x, y, E)`
+    measurements with sparsity in spatial (*xy*) domain only)
+    """
+    if np.ndim(sd) > 3 or np.ndim(mean) > 3:
+        raise AssertionError("Inputs should be 2D or 3D")
+    if np.ndim(sd) == 3:
+        sd = np.sum(sd, axis=-1)
+    if np.ndim(mean) == 3:
+        mean = np.sum(mean, axis=-1)
+    vals_list, indices_list = acquisition(
+        mean, sd, acquisition_function=None, lscale=0, batch_size=None)
+    return vals_list, indices_list
+
+
+def acquisition(mean, sd,
+                acquisition_function=None, batch_size=100,
+                batch_update=False, lscale=0):
     """
     Takes GP-predicted mean and standard deviation
-    and calculates an acquisition function
+    and computes a batch of the next query points
 
     Args:
         mean (ndarray)
@@ -39,27 +61,69 @@ def acquisistion(mean, sd, acquisition_function=None):
             applies some math operation to them
             (e.g. :math:`\\upmu - 2 \\times \\upsigma`)
             and returns the result
+        batch_size (int):
+                Number of query points to return
+        batch_update:
+            Filters the query points based on the specified lengthscale
+        lscale (float):
+            Lengthscale determining the separation (euclidean)
+            distance between query points. Defaults to the kernel
+            lengthscale
 
     Returns:
         Indices and values of the points with the largest values
         of acquisition function
     """
-    if np.ndim(sd) == 3:
-        sd = np.sum(sd, axis=-1)
-    if np.ndim(mean) == 3:
-        mean = np.sum(mean, axis=-1)
-    amax_list, uncert_list = [], []
+    indices_list, vals_list = [], []
     if acquisition_function is None:
         acq = sd
     else:
         acq = acquisition_function(mean, sd)
-    for i in range(len(sd.flatten())):
-        amax = [i[0] for i in np.where(acq == acq.max())]
-        amax_list.append(amax)
-        uncert_list.append(acq.max())
-        acq[amax[0], amax[1]] = acq.min() - 1
+    for i in range(batch_size):
+        amax_idx = [i[0] for i in np.where(acq == acq.max())]
+        indices_list.append(amax_idx)
+        vals_list.append(acq.max())
+        acq[tuple(amax_idx)] = acq.min() - 1
+    if not batch_update:
+        return vals_list, indices_list
+    vals_list, indices_list = next_batch(
+        np.array(vals_list),
+        np.vstack(indices_list),
+        lscale)
+    return vals_list, indices_list
 
-    return amax_list, uncert_list
+
+def next_batch(acqfunc_values, indices, lscale):
+    """
+    Returns a batch of query points whose separation distance
+    is determined by kernel lengthscale
+    Args:
+        acqfunc_values (ndarray):
+            (*N*,) numpy array with values of acquisition function
+        indices (ndarray):
+            (*N*, *c*) numpy array with corresponding indices,
+            where c ia a number of dimensions of the dataset
+        lscale (float):
+            kernel lengthscale
+
+    Returns:
+        Tuple with computed indices and corresponding values
+    """
+    minval = acqfunc_values.min()
+    new_max = acqfunc_values.max()
+    new_max_id = np.argmax(acqfunc_values)
+    max_val_all, max_id_all = [], []
+    ck = indices[new_max_id]
+    tree = spatial.cKDTree(indices)
+    while new_max > minval - 1:
+        max_val_all.append(new_max)
+        max_id_all.append(new_max_id)
+        nn_indices = tree.query_ball_point(ck, lscale)
+        acqfunc_values[nn_indices] = minval - 1
+        new_max = acqfunc_values.max()
+        new_max_id = np.argmax(acqfunc_values)
+        ck = indices[new_max_id]
+    return max_val_all, indices[max_id_all].tolist()
 
 
 def mask_edges(imgdata, dist_edge):
@@ -82,7 +146,7 @@ def mask_edges(imgdata, dist_edge):
     return imgdata * mask
 
 
-def checkvalues(uncert_idx_list, uncert_idx_all, uncert_val_list):
+def checkvalues(uncert_idx_list, uncert_idx_all, uncert_val_list, verbose=True):
     """
     Checks if the indices were already used
     (helps not to get stuck in one point during GP-based sample exploration)
@@ -103,15 +167,18 @@ def checkvalues(uncert_idx_list, uncert_idx_all, uncert_val_list):
         Otherwise, returns the next/closest value from the list.
     """
     _idx = 0
-    print('Acquisition function value {} at {}'.format(
-        uncert_val_list[_idx], uncert_idx_list[_idx]))
+    if verbose:
+        print('Acquisition function value {} at {}'.format(
+            uncert_val_list[_idx], uncert_idx_list[_idx]))
     if len(uncert_idx_all) == 0:
         return uncert_idx_list[_idx], uncert_val_list[_idx]
     while 1 in [1 for a in uncert_idx_all if a == uncert_idx_list[_idx]]:
-        print("Finding the next max point...")
+        if verbose:
+            print("Finding the next max point...")
         _idx = _idx + 1
-        print('Acquisition function value {} at {}'.format(
-            uncert_val_list[_idx], uncert_idx_list[_idx]))
+        if verbose:
+            print('Acquisition function value {} at {}'.format(
+                uncert_val_list[_idx], uncert_idx_list[_idx]))
     return uncert_idx_list[_idx], uncert_val_list[_idx]
 
 
@@ -148,7 +215,7 @@ def do_measurement(R_true, X_true, R, X, uncertmax, measure):
     return R, X
 
 
-def prepare_training_data(X, y):
+def prepare_training_data(X, y, vector_valued=False):
     """
     Reshapes and converts data to torch tensors for GP analysis
 
@@ -170,7 +237,11 @@ def prepare_training_data(X, y):
     tor = lambda n: torch.from_numpy(n)
     X = X.reshape(X.shape[0], np.product(X.shape[1:])).T
     X = tor(X[~np.isnan(X).any(axis=1)])
-    y = tor(y.flatten()[~np.isnan(y.flatten())])
+    if vector_valued:
+        y = y.reshape(np.product(y.shape[:-1]), y.shape[-1])
+        y = tor(y[~np.isnan(y).any(axis=1)])
+    else:
+        y = tor(y.flatten()[~np.isnan(y.flatten())])
 
     return X, y
 
@@ -267,14 +338,21 @@ def get_sparse_grid(R):
         X = X_true.copy().reshape(2, e1*e2)
         X[:, np.where(np.isnan((R.flatten())))] = np.nan
         X = X.reshape(2, e1, e2)
-    elif np.ndim(R) == 3:
+    elif np.ndim(R) == 3 and not np.isnan(R[..., -1]).any():
         e1, e2, e3 = R.shape
         X = X_true.copy().reshape(3, e1*e2, e3)
         indices = np.where(np.isnan((R.reshape(e1*e2, e3))))[0]
         X[:, indices] = np.nan
         X = X.reshape(3, e1, e2, e3)
+    elif np.ndim(R) == 3 and np.isnan(R[..., -1]).any():
+        e1, e2, e3 = R.shape
+        X = X_true.copy().reshape(3, e1*e2*e3)
+        indices = np.where(np.isnan((R.reshape(e1*e2*e3))))[0]
+        X[:, indices] = np.nan
+        X = X.reshape(3, e1, e2, e3)
     else:
-        raise NotImplementedError("Currently supports only 2D and 3D sets")
+        raise NotImplementedError(
+            "Currently supports only 2D and 3D sets with sparsity in xy and xyz dims")
     return X
 
 

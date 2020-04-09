@@ -1,7 +1,10 @@
 [![Build Status](https://travis-ci.com/ziatdinovmax/atomai.svg?branch=master)](https://travis-ci.com/ziatdinovmax/atomai)
 [![Documentation Status](https://readthedocs.org/projects/gpim/badge/?version=latest)](https://gpim.readthedocs.io/en/latest/?badge=latest)
-[![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/examples/notebooks/Quickstart_GPim.ipynb)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/07ee1606a88b48d1bc46453f3ae1b1c8)](https://app.codacy.com/manual/ziatdinovmax/GPim?utm_source=github.com&utm_medium=referral&utm_content=ziatdinovmax/GPim&utm_campaign=Badge_Grade_Dashboard)
+
+
+[![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/examples/notebooks/Quickstart_GPim.ipynb)
+[![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/ziatdinovmax/GPim)
 # GPim
 
 **Under active development (expect some breaking changes)**
@@ -41,16 +44,15 @@ Below is a simple example of applying GPim to reconstructing a sparse 2D image. 
 
 ```python
 import gpim
-from gpim import gprutils
 import numpy as np
 
 # # Load dataset
 R = np.load('sparse_exp_data.npy') 
 
 # Get full (ideal) grid indices
-X_full = gprutils.get_full_grid(R, dense_x=1)
+X_full = gpim.utils.get_full_grid(R, dense_x=1)
 # Get sparse grid indices
-X_sparse = gprutils.get_sparse_grid(R)
+X_sparse = gpim.utils.get_sparse_grid(R)
 # Kernel lengthscale constraints (optional)
 lmin, lmax = 1., 4.
 lscale = [[lmin, lmin], [lmax, lmax]] 
@@ -62,35 +64,16 @@ mean, sd, hyperparams = gpim.reconstructor(
     use_gpu=True, verbose=False).run()
 
 # Plot reconstruction results
-gprutils.plot_reconstructed_data2d(R, mean, cmap='jet')
+gpim.utils.plot_reconstructed_data2d(R, mean, cmap='jet')
 # Plot evolution of kernel hyperparameters during training
-gprutils.plot_kernel_hyperparams(hyperparams)
+gpim.utils.plot_kernel_hyperparams(hyperparams)
 ```
 
 ### Running GPim notebooks in the cloud
 
-1) Executable Google Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/examples/notebooks/GP_sparse2Dimages.ipynb) with the example of applying GP to sparse spiral 2D scans in piezoresponse force microscopy (PFM).
-2) Executable Googe Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/examples/notebooks/GP_BEPFM.ipynb) with the example of applying GP to both hyperspectral (3D) data reconstruction and sample exploration based on maximal uncertainty reduction in band excitation scanning probe microscopy (BEPFM).
-3) Executable Google Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/examples/notebooks/GP_TD_cKPFM.ipynb) with the example of applying GP to 4D spectroscopic dataset for smoothing and resolution enhancement in contact Kelvin Probe Force Microscopy (cKPFM)
-
-### Command line usage
-To perform GP-based reconstruction of sparse 2D image or sparse hyperspectral 3D data (datacube where measurements (spectroscopic curves) are missing for various xy positions), use ```reconstruct.py``` file from the [examples](https://github.com/ziatdinovmax/GPim/tree/master/examples):
-
-```bash
-python3 reconstruct.py <path/to/file.npy>
-```
-
-The missing values in the sparse data must be [NaNs](https://docs.scipy.org/doc/numpy/reference/constants.html?highlight=numpy%20nan#numpy.nan). The ```reconstruct.py``` will return a zipped archive (.npz format) of numpy files corresponding to the ground truth (if applicable), input data, predictive mean and variance, and learned kernel hyperparameters. You can use ```python3 plot.py <path/to/file.npz>``` to view the results.
-
-**TODO:** Add SKI kernel option.
-
-To perform GP-guided sample exploration with hyperspectral (3D) measurements based on the reduction of maximal uncertainty, use ```explore.py``` file from the [examples](https://github.com/ziatdinovmax/GPim/tree/master/examples): 
-
-```bash
-python3 explore.py <path/to/file.npy>
-```
-
-Notice that the exploration part currently runs only "synthetic experiments" where you need to provide a full dataset (no missing values) as a ground truth.
+1) Executable Google Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/dev/examples/notebooks/GP_2D3D_images.ipynb) with the example of applying GP to sparse spiral 2D scans in piezoresponse force microscopy (PFM) and hyperspectral 3D data in Band Excitation PFM.
+2) Executable Google Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/examples/notebooks/GP_TD_cKPFM.ipynb) with the example of applying GP to 4D spectroscopic dataset for smoothing and resolution enhancement in contact Kelvin Probe Force Microscopy (cKPFM)
+3) Simple example of performing GP-based exploration-exploitation on a toy dataset- TBA 
 
 ## Requirements
 

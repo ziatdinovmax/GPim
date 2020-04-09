@@ -1,7 +1,7 @@
 '''
 gpr.py
 ======
-Sparse Gaussian process regression:
+Gaussian process regression:
 model training, prediction and uncertainty exploration
 This module serves as a high-level wrapper for sparse Gaussian processes module
 from Pyro probabilistic programming library (https://pyro.ai/)
@@ -11,20 +11,21 @@ Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
 
 import time
 import numpy as np
-import gpim.gprutils as gprutils
+from gpim.kernels import pyro_kernels
+from gpim import gprutils
 import torch
 import pyro
 import pyro.contrib.gp as gp
-import pyro.distributions as dist
 import warnings
 
 
 class reconstructor:
     """
-    Class for Gaussian process (GP) regression-based reconstuction
-    of sparse 2D image and 3D spectroscopic datasets,
-    and sample exploration with hyperspectral measurements
-    based on maximal uncertainty reduction.
+    Class for Gaussian process-based reconstuction
+    of sparse 2D images and 3D spectroscopic datasets,
+    and exploration/explotaition routines for the selection
+    of next query point.
+
     Args:
         X (ndarray):
             Grid indices with dimensions :math:`c \\times N \\times M`
@@ -48,6 +49,8 @@ class reconstructor:
             the kernel will have only one lenghtscale, even if the dataset
             is multi-dimensional. For lists of two lists, the number of elements
             in each list must be equal to the dataset dimensionality.
+        sparse (bool):
+            Perform sparse GP regression when set to True.
         indpoints (int):
             Number of inducing points for SparseGPRegression.
             Defaults to total_number_of_points // 10.
@@ -58,12 +61,10 @@ class reconstructor:
             Uses GPU hardware accelerator when set to 'True'.
             Notice that for large datasets training model without GPU
             is extremely slow.
-        verbose (bool):
-            Prints training statistics after each 100th training iteration
+        verbose (int):
+            Level of verbosity (0, 1, or 2)
         seed (int):
             for reproducibility
-        **sparse (bool):
-            Perform sparse GP regression in all cases
         **amplitude (float): kernel variance or amplitude squared
     """
     def __init__(self,
@@ -77,13 +78,14 @@ class reconstructor:
                  learning_rate=5e-2,
                  iterations=1000,
                  use_gpu=False,
-                 verbose=False,
+                 verbose=1,
                  seed=0,
                  **kwargs):
         """
         Initiates reconstructor parameters
         and pre-processes training and test data arrays
         """
+        self.verbose = verbose
         torch.manual_seed(seed)
         pyro.set_rng_seed(seed)
         pyro.clear_param_store()
@@ -103,9 +105,9 @@ class reconstructor:
         if lengthscale is None:
             lengthscale = [[0. for l in range(input_dim)],
                            [np.mean(y.shape) / 2 for l in range(input_dim)]]
-        kernel = get_kernel(kernel, input_dim,
-                            lengthscale, use_gpu,
-                            amplitude=kwargs.get('amplitude'))
+        kernel = pyro_kernels.get_kernel(
+            kernel, input_dim, lengthscale, use_gpu,
+            amplitude=kwargs.get('amplitude'))
         if Xtest is not None:
             self.fulldims = Xtest.shape[1:]
         else:
@@ -128,7 +130,8 @@ class reconstructor:
             else:
                 indpoints = len(self.X) if indpoints > len(self.X) else indpoints
             Xu = self.X[::len(self.X) // indpoints]
-            print("# of inducing points for sparse GP regression: {}".format(len(Xu)))
+            if self.verbose == 2:
+                print("# of inducing points for sparse GP regression: {}".format(len(Xu)))
             self.model = gp.models.SparseGPRegression(
                 self.X, self.y, kernel, Xu, jitter=1.0e-5)
         if use_gpu:
@@ -144,7 +147,6 @@ class reconstructor:
             "variance": self.amp_all,
             "inducing_points": self.indpoints_all
             }
-        self.verbose = verbose
 
     def train(self, **kwargs):
         """
@@ -161,7 +163,8 @@ class reconstructor:
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
         loss_fn = pyro.infer.Trace_ELBO().differentiable_loss
         start_time = time.time()
-        print('Model training...')
+        if self.verbose:
+            print('Model training...')
         for i in range(self.iterations):
             optimizer.zero_grad()
             loss = loss_fn(self.model.model, self.model.guide)
@@ -172,35 +175,36 @@ class reconstructor:
             self.noise_all.append(self.model.noise.item())
             if self.do_sparse:
                 self.indpoints_all.append(self.model.Xu.detach().cpu().numpy())
-            if self.verbose and (i % 100 == 0 or i == self.iterations - 1):
+            if self.verbose == 2 and (i % 100 == 0 or i == self.iterations - 1):
                 print('iter: {} ...'.format(i),
                       'loss: {} ...'.format(np.around(loss.item(), 4)),
                       'amp: {} ...'.format(np.around(self.amp_all[-1], 4)),
                       'length: {} ...'.format(np.around(self.lscales[-1], 4)),
                       'noise: {} ...'.format(np.around(self.noise_all[-1], 7)))
-            if i == 100:
+            if i == 100 and self.verbose:
                 print('average time per iteration: {} s'.format(
                     np.round(time.time() - start_time, 2) / 100))
-        print('training completed in {} s'.format(
-            np.round(time.time() - start_time, 2)))
-        print('Final parameter values:\n',
-              'amp: {}, lengthscale: {}, noise: {}'.format(
-                np.around(self.model.kernel.variance_map.item(), 4),
-                np.around(self.model.kernel.lengthscale_map.tolist(), 4),
-                np.around(self.model.noise.item(), 7)))
+        if self.verbose:
+            print('training completed in {} s'.format(
+                np.round(time.time() - start_time, 2)))
+            print('Final parameter values:\n',
+                'amp: {}, lengthscale: {}, noise: {}'.format(
+                    np.around(self.model.kernel.variance_map.item(), 4),
+                    np.around(self.model.kernel.lengthscale_map.tolist(), 4),
+                    np.around(self.model.noise.item(), 7)))
         return
 
     def predict(self, Xtest=None):
         """
-        Use trained GP regression model to make predictions
+        Uses trained GP regression model to make predictions
         Args:
             Xtest (ndarray):
-            "Test" points (for prediction with a trained GP model)
-            with dimensions :math:`N \\times M` or :math:`N \\times M \\times L`.
-            Uses Xtest from __init__ by default. If Xtest is None,
-            uses training data X.
+                "Test" points (for prediction with a trained GP model)
+                with dimensions :math:`N \\times M` or :math:`N \\times M \\times L`.
+                Uses Xtest from __init__ by default. If Xtest is None,
+                uses training data X.
         Returns:
-            Predictive mean and variance
+            Predictive mean and standard deviation
         """
         if Xtest is None and self.Xtest is None:
             warnings.warn(
@@ -212,11 +216,17 @@ class reconstructor:
             self.fulldims = Xtest.shape[1:]
             if next(self.model.parameters()).is_cuda:
                 self.Xtest = self.Xtest.cuda()
-        print("Calculating predictive mean and variance...", end=" ")
+        if self.verbose:
+            print("Calculating predictive mean and variance...", end=" ")
         with torch.no_grad():
             mean, cov = self.model(self.Xtest, full_cov=False, noiseless=False)
-        print("Done")
-        return mean.cpu().numpy(), cov.sqrt().cpu().numpy()
+        mean = mean.cpu().numpy()
+        sd = cov.sqrt().cpu().numpy()
+        mean = mean.reshape(self.fulldims)
+        sd = sd.reshape(self.fulldims)
+        if self.verbose:
+            print("Done")
+        return mean, sd
 
     def run(self, **kwargs):
         """
@@ -227,7 +237,7 @@ class reconstructor:
             **steps (int):
                 number of SVI training iteratons
         Returns:
-            Predictive mean and SD as flattened ndarrays and
+            Predictive mean, standard deviation and
             dictionary with hyperparameters evolution
             as a function of SVI steps
         """
@@ -245,105 +255,48 @@ class reconstructor:
             torch.cuda.empty_cache()
         return mean, sd, self.hyperparams
 
-    def step(self, acquisition_function=None, **kwargs):
+    def step(self, acquisition_function=None,
+             batch_size=100, batch_update=False,
+             lscale=None, **kwargs):
         """
         Performs single train-predict step for exploration analysis
-        returning a new point with maximum uncertainty
+        returning a new point with maximum value of acquisition function
+
         Args:
+            acquisition_function (python function):
+                Function that takes two parameters, mean and sd,
+                and applies some math operation to them
+                (e.g. :math:`\\upmu - 2 \\times \\upsigma`)
+            batch_size (int):
+                Number of query points to return
+            batch_update:
+                Filters the query points based on the specified lengthscale
+            lscale (float):
+                Lengthscale determining the separation (euclidean)
+                distance between query points. Defaults to the kernel
+                lengthscale
             **learning_rate (float):
-                learning rate for GP regression model training
+                Learning rate for GP regression model training
             **steps (int):
-                number of SVI training iteratons
+                Number of SVI training iteratons
         Returns:
-            lists of indices and values for points with maximum uncertainty,
+            Lists of indices and values for points with maximum uncertainty,
             predictive mean and standard deviation (as flattened numpy arrays)
         """
         if kwargs.get("learning_rate") is not None:
             self.learning_rate = kwargs.get("learning_rate")
         if kwargs.get("iterations") is not None:
             self.iterations = kwargs.get("iterations")
+        if lscale is None:
+            lscale = self.model.kernel.lengthscale.mean().item()
         # train a model
         self.train(learning_rate=self.learning_rate, iterations=self.iterations)
         # make prediction
         mean, sd = self.predict()
-        # find point with maximum uncertainty
+        # find point with maximum value of acquisition function
         sd_ = sd.reshape(self.fulldims)
         mean_ = mean.reshape(self.fulldims)
-        amax, uncert_list = gprutils.acquisistion(
-            mean_, sd_, acquisition_function)
-        return amax, uncert_list, mean, sd
-
-
-def get_kernel(kernel_type, input_dim, lengthscale, use_gpu=False, **kwargs):
-    """
-    Initalizes one of the following kernels:
-    RBF, Rational Quadratic, Matern
-    Args:
-        kernel_type (str):
-            kernel type ('RBF', 'Rational Quadratic', Matern52')
-        input_dim (int):
-            number of input dimensions
-            (equal to number of feature vector columns)
-        lengthscale (list of two lists):
-            determines lower (1st list) and upper (2nd list) bounds
-            for kernel lengthscale(s). Number of elements in each list
-            is equal to the input dimensions
-        use_gpu (bool):
-            sets default tensor type to torch.cuda.DoubleTensor
-        **amplitude (list with two floats):
-            determines bounds on kernel amplitude parameter
-            (default is from 1e-4 to 10)
-    Returns:
-        Pyro kernel object
-    """
-    if use_gpu and torch.cuda.is_available():
-        torch.set_default_tensor_type(torch.cuda.DoubleTensor)
-    else:
-        torch.set_default_tensor_type(torch.DoubleTensor)
-
-    amp = kwargs.get('amplitude')
-    lscale = lengthscale
-    amp = [1e-4, 10.] if amp is None else amp
-    # Needed in Pyro < 1.0.0
-    lscale_ = torch.tensor(lscale[0]) + 1e-5
-
-    # initialize the kernel
-    kernel_book = lambda input_dim: {
-        'RBF': gp.kernels.RBF(
-            input_dim, lengthscale=lscale_
-            ),
-        'RationalQuadratic': gp.kernels.RationalQuadratic(
-            input_dim, lengthscale=lscale_
-            ),
-        'Matern52': gp.kernels.Matern52(
-            input_dim, lengthscale=lscale_
-            )
-    }
-
-    try:
-        kernel = kernel_book(input_dim)[kernel_type]
-    except KeyError:
-        print('Select one of the currently available kernels:',\
-              '"RBF", "RationalQuadratic", "Matern52"')
-        raise
-
-    with warnings.catch_warnings():  # TODO: use PyroSample to set priors
-        warnings.filterwarnings("ignore", category=UserWarning)
-
-        # set priors
-        kernel.set_prior(
-            "variance",
-            dist.Uniform(
-                torch.tensor(amp[0]),
-                torch.tensor(amp[1])
-            )
-        )
-        kernel.set_prior(
-            "lengthscale",
-            dist.Uniform(
-                torch.tensor(lscale[0]),
-                torch.tensor(lscale[1])
-            ).independent()
-        )
-
-    return kernel
+        vals, inds = gprutils.acquisition(
+            mean_, sd_, acquisition_function,
+            batch_size, batch_update, lscale)
+        return vals, inds, mean, sd
