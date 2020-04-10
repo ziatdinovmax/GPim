@@ -30,12 +30,12 @@ class boptimizer:
 
     Args:
         X_seed (ndarray):
-            Seed sparse grid indices with dimensions :math:`c \\times N \\times M`
+            Seeded sparse grid indices with dimensions :math:`c \\times N \\times M`
             or :math:`c \\times N \\times M \\times L`
             where *c* is equal to the number of coordinates
             (for example, for *xyz* coordinates, *c* = 3)
         y_seed (ndarray):
-            Seed sparse "observations" (data points) with dimensions
+            Seeded sparse "observations" (data points) with dimensions
             :math:`N \\times M` or :math:`N \\times M \\times L`.
             Typically, for 2D image *N* and *M* are image height and width,
             whereas for 3D hyperspectral data *N* and *M* are spatial dimensions
@@ -133,8 +133,8 @@ class boptimizer:
             X_seed, y_seed, X_full, kernel, lengthscale, sparse, indpoints,
             learning_rate, iterations, self.use_gpu, self.verbose, seed)
 
-        self.X_sparse = X_seed
-        self.y_sparse = y_seed
+        self.X_sparse = X_seed.copy()
+        self.y_sparse = y_seed.copy()
         self.X_full = X_full
         if self.use_gpu and torch.cuda.is_available():
             self.X_sparse = self.X_sparse.cuda()
