@@ -139,9 +139,6 @@ class boptimizer:
         self.X_sparse = X_seed.copy()
         self.y_sparse = y_seed.copy()
         self.X_full = X_full
-        if self.use_gpu and torch.cuda.is_available():
-            self.X_sparse = self.X_sparse.cuda()
-            self.y_sparse = self.y_sparse.cuda()
 
         self.target_function = target_function
         self.acquisition_function = acquisition_function
@@ -309,7 +306,7 @@ class boptimizer:
         e = args[0]
         if self.verbose:
             print("\nExploration step {} / {}".format(
-                e, self.exploration_steps))
+                e+1, self.exploration_steps))
         # train with seeded data
         if e == 0:
             self.surrogate_model.train()
