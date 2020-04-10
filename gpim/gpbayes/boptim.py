@@ -155,6 +155,7 @@ class boptimizer:
         self.lscale = kwargs.get("lscale", None)
         self.indices_all, self.vals_all = [], []
         self.target_func_vals_all = [y_seed.copy()]
+        self.gp_predictions = []
 
     def update_posterior(self):
         """
@@ -193,20 +194,21 @@ class boptimizer:
         """
         indices_list, vals_list = [], []
         if self.acquisition_function == 'cb':
-            acq = acqfunc.confidence_bound(
+            acq, pred = acqfunc.confidence_bound(
                 self.surrogate_model, self.X_full,
                 alpha=self.alpha, beta=self.beta)
         elif self.acquisition_function == 'ei':
-            acq = acqfunc.expected_improvement(
+            acq, pred = acqfunc.expected_improvement(
                 self.surrogate_model, self.X_full,
                 self.X_sparse, xi=self.xi)
         elif self.acquisition_function == 'poi':
-            acq = acqfunc.probability_of_improvement(
+            acq, pred = acqfunc.probability_of_improvement(
                 self.surrogate_model, self.X_full,
                 self.X_sparse, xi=self.xi)
         else:
             raise NotImplementedError(
                 "Choose between 'cb', 'ei', and 'poi' acquisition functions")
+        self.gp_predictions.append(pred)
         for i in range(self.batch_size):
             amax_idx = [i[0] for i in np.where(acq == acq.max())]
             indices_list.append(amax_idx)
