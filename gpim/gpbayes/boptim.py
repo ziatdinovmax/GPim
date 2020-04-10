@@ -86,19 +86,22 @@ class boptimizer:
         **beta (float or int):
             beta coefficient in the 'confidence bound' acquisition function
             (Default: 1)
-        **xi (float): 
+        **xi (float):
             xi coefficient in 'expected improvement'
             and 'probability of improvement' acquisition functions
         **use_gpu (bool):
             Uses GPU hardware accelerator when set to 'True'.
             Notice that for large datasets training model without GPU
             is extremely slow.
-        **verbose (int):
-            Level of verbosity (0, 1, or 2)
         **lscale (float):
             Lengthscale determining the separation (euclidean)
             distance between query points. Defaults to the kernel
             lengthscale at a given step
+        **extent(list of lists):
+            Define multi-dimensional data bounds. For example, for 2D data,
+            the extent parameter is [[xmin, xmax], [ymin, ymax]]
+        **verbose (int):
+            Level of verbosity (0, 1, or 2)
     """
     def __init__(self,
                  X_seed,

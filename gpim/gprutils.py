@@ -293,6 +293,9 @@ def get_full_grid(R, extent=None, dense_x=1.):
     Args:
         R (ndarray):
             Grid measurements as 2D-4D numpy array
+        extent (list of lists):
+            Define multi-dimensional data bounds. For example, for 2D data,
+            the extent parameter is [[xmin, xmax], [ymin, ymax]]
         dense_x (float):
             Determines grid density
             (can be increased at prediction stage)
