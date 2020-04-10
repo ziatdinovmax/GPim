@@ -148,6 +148,12 @@ class boptimizer:
         self.exploration_steps = exploration_steps
         self.batch_update = batch_update
         self.batch_size = batch_size
+        self.simulate_measurement = kwargs.get("simulate_measurement", False)
+        if self.simulate_measurement:
+            self.y_true = kwargs.get("y_true")
+            if self.y_true is None:
+                raise AssertionError(
+                    "To simulate measurements, add ground truth ('y_true)")
         self.extent = kwargs.get("extent", None)
         self.alpha = kwargs.get("alpha", 0)
         self.beta = kwargs.get("beta", 1)
@@ -175,15 +181,19 @@ class boptimizer:
         Evaluates target function in the new point(s)
         """
         indices = [indices] if not self.batch_update else indices
-        for idx in indices:
-            if self.extent is not None:
-                _idx = []
-                for i, e in zip(idx, self.extent):
-                    _idx.append(i + e[0])
-                _idx = tuple(_idx)
-            else:
-                _idx = tuple(idx)
-            self.y_sparse[tuple(idx)] = self.target_function(_idx)
+        if self.simulate_measurement:
+            for idx in indices:
+                self.y_sparse[tuple(idx)] = self.y_true[tuple(idx)]
+        else:
+            for idx in indices:
+                if self.extent is not None:
+                    _idx = []
+                    for i, e in zip(idx, self.extent):
+                        _idx.append(i + e[0])
+                    _idx = tuple(_idx)
+                else:
+                    _idx = tuple(idx)
+                self.y_sparse[tuple(idx)] = self.target_function(_idx)
         self.X_sparse = gprutils.get_sparse_grid(self.y_sparse, self.extent)
         self.target_func_vals_all.append(self.y_sparse.copy())
         return
