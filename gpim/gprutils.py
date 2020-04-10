@@ -286,7 +286,7 @@ def get_grid_indices(R, dense_x=1.):
     return X_full, X_sparse
 
 
-def get_full_grid(R, dense_x=1.):
+def get_full_grid(R, extent=None, dense_x=1.):
     """
     Creates grid indices for 2D-4D numpy arrays
 
@@ -303,22 +303,54 @@ def get_full_grid(R, dense_x=1.):
     dense_x = np.float(dense_x)
     if np.ndim(R) == 2:
         e1, e2 = R.shape
-        c1, c2 = np.mgrid[:e1:dense_x, :e2:dense_x]
+        if extent:
+            dx = extent[0][1] - extent[0][0]
+            dy = extent[1][1] - extent[1][0]
+            dx = dense_x / (e1//dx)
+            dy = dense_x / (e2//dy)
+            c1, c2 = np.mgrid[
+                extent[0][0]:extent[0][1]:dx, extent[1][0]:extent[1][1]:dy]
+        else:
+            c1, c2 = np.mgrid[:e1:dense_x, :e2:dense_x]
         X_grid = np.array([c1, c2])
     elif np.ndim(R) == 3:
         e1, e2, e3 = R.shape
-        c1, c2, c3 = np.mgrid[:e1:dense_x, :e2:dense_x, :e3:dense_x]
+        if extent:
+            dx = extent[0][1] - extent[0][0]
+            dy = extent[1][1] - extent[1][0]
+            dz = extent[2][1] - extent[2][0]
+            dx = dense_x / (e1//dx)
+            dy = dense_x / (e2//dy)
+            dz = dense_x / (e3//dz)
+            c1, c2 = np.mgrid[
+                extent[0][0]:extent[0][1]:dx, extent[1][0]:extent[1][1]:dy,
+                extent[2][0]:extent[2][1]:dz]
+        else:
+            c1, c2, c3 = np.mgrid[:e1:dense_x, :e2:dense_x, :e3:dense_x]
         X_grid = np.array([c1, c2, c3])
     elif np.ndim(R) == 4:
         e1, e2, e3, e4 = R.shape
-        c1, c2, c3, c4 = np.mgrid[:e1:dense_x, :e2:dense_x, :e3:dense_x, :e4:dense_x]
+        if extent:
+            dx = extent[0][1] - extent[0][0]
+            dy = extent[1][1] - extent[1][0]
+            dz = extent[2][1] - extent[2][0]
+            df = extent[3][1] - extent[3][0]
+            dx = dense_x / (e1//dx)
+            dy = dense_x / (e2//dy)
+            dz = dense_x / (e3//dz)
+            df = dense_x / (e4//df)
+            c1, c2 = np.mgrid[
+                extent[0][0]:extent[0][1]:dx, extent[1][0]:extent[1][1]:dy,
+                extent[2][0]:extent[2][1]:dz, extent[3][0]:extent[3][1]:df]
+        else:
+            c1, c2, c3, c4 = np.mgrid[:e1:dense_x, :e2:dense_x, :e3:dense_x, :e4:dense_x]
         X_grid = np.array([c1, c2, c3, c4])
     else:
         raise NotImplementedError("Currently works only for 2D-4D sets")
     return X_grid
 
 
-def get_sparse_grid(R):
+def get_sparse_grid(R, extent=None):
     """
     Returns sparse grid for sparse image data
 
@@ -332,7 +364,7 @@ def get_sparse_grid(R):
     if not np.isnan(R).any():
         raise NotImplementedError(
             "Missing values in sparse data must be represented as NaNs")
-    X_true = get_full_grid(R)
+    X_true = get_full_grid(R, extent)
     if np.ndim(R) == 2:
         e1, e2 = R.shape
         X = X_true.copy().reshape(2, e1*e2)

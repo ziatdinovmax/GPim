@@ -145,6 +145,7 @@ class boptimizer:
         self.exploration_steps = exploration_steps
         self.batch_update = batch_update
         self.batch_size = batch_size
+        self.extent = kwargs.get("extent", None)
         self.alpha = kwargs.get("alpha", 0)
         self.beta = kwargs.get("beta", 1)
         self.xi = kwargs.get("xi", 0.01)
@@ -171,8 +172,15 @@ class boptimizer:
         """
         indices = [indices] if not self.batch_update else indices
         for idx in indices:
-            self.y_sparse[tuple(idx)] = self.target_function(idx)
-        self.X_sparse = gprutils.get_sparse_grid(self.y_sparse)
+            if self.extent is not None:
+                _idx = []
+                for i, e in zip(idx, self.extent):
+                    _idx.append(i + e[0])
+                _idx = tuple(_idx)
+            else:
+                _idx = tuple(idx)
+            self.y_sparse[tuple(idx)] = self.target_function(_idx)
+        self.X_sparse = gprutils.get_sparse_grid(self.y_sparse, self.extent)
         self.target_func_vals_all.append(self.y_sparse.copy())
         return
 
