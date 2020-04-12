@@ -61,6 +61,8 @@ class skreconstructor:
             for reproducibility
         **grid_points_ratio (float):
             Ratio of inducing points to overall points
+        **isotropic (bool):
+            one kernel lengthscale in all dimensions
         **max_root (int):
             Maximum number of Lanczos iterations to perform
             in prediction stage
@@ -114,8 +116,10 @@ class skreconstructor:
         else:
             torch.set_default_tensor_type(torch.DoubleTensor)
         self.likelihood = gpytorch.likelihoods.GaussianLikelihood()
+        isotropic = kwargs.get("isotropic")
         _kernel = gpytorch_kernels.get_kernel(
-            kernel, input_dim, use_gpu, lengthscale=lengthscale)
+            kernel, input_dim, use_gpu,
+            lengthscale=lengthscale, isotropic=isotropic)
         grid_points_ratio = kwargs.get("grid_points_ratio", 1.)
         self.model = skgprmodel(self.X, self.y,
                                 _kernel, self.likelihood, input_dim,

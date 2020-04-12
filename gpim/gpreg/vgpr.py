@@ -59,6 +59,8 @@ class vreconstructor:
             Level of verbosity (0, 1, or 2)
         seed (int):
             for reproducibility
+        **isotropic (bool):
+            one kernel lengthscale in all dimensions
         **max_root (int):
             Maximum number of Lanczos iterations to perform
             in prediction stage
@@ -112,8 +114,10 @@ class vreconstructor:
         else:
             torch.set_default_tensor_type(torch.DoubleTensor)
         self.likelihood = gpytorch.likelihoods.MultitaskGaussianLikelihood(num_tasks)
+        isotropic = kwargs.get("isotropic")
         _kernel = gpytorch_kernels.get_kernel(
-            kernel, input_dim, use_gpu, lengthscale=lengthscale)
+            kernel, input_dim, use_gpu,
+            lengthscale=lengthscale, isotropic=isotropic)
 
         if not independent:
             self.model = vgprmodel(self.X, self.y,
