@@ -102,9 +102,11 @@ class reconstructor:
         input_dim = np.ndim(y)
         self.X, self.y = gprutils.prepare_training_data(X, y)
         self.do_sparse = sparse
-        if lengthscale is None:
+        if lengthscale is None and kwargs.get("isotropic") is None:
             lengthscale = [[0. for l in range(input_dim)],
-                           [np.mean(y.shape) / 2 for l in range(input_dim)]]
+                           [np.mean(y.shape) / 2 for l in range(input_dim)]]  # TODO Make separate lscale for each dim
+        elif lengthscale is None and kwargs.get("isotropic"):
+            lengthscale = [0., np.mean(y.shape) / 2]
         kernel = pyro_kernels.get_kernel(
             kernel, input_dim, lengthscale, use_gpu,
             amplitude=kwargs.get('amplitude'))
