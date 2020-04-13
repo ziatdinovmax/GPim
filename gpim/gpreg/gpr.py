@@ -112,7 +112,7 @@ class reconstructor:
         self.X, self.y = gprutils.prepare_training_data(
             X, y, precision=self.precision)
         self.do_sparse = sparse
-        if lengthscale is None and kwargs.get("isotropic") is None:
+        if lengthscale is None and not kwargs.get("isotropic"):
             lengthscale = [[0. for l in range(input_dim)],
                            [np.mean(y.shape) / 2 for l in range(input_dim)]]  # TODO Make separate lscale for each dim
         elif lengthscale is None and kwargs.get("isotropic"):
