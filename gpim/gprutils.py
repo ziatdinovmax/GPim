@@ -268,12 +268,13 @@ def prepare_test_data(X, **kwargs):
         Pytorch tensor with dimensions :math:`N \\times M \\times L \\times c`
     """
     precision = kwargs.get("precision", "double")
+     precision = kwargs.get("precision", "double")
     if precision == 'single':
-        torch.set_default_tensor_type(torch.FloatTensor)
+        tensor_type = torch.FloatTensor
     else:
-        torch.set_default_tensor_type(torch.DoubleTensor)
+        tensor_type = torch.DoubleTensor
     X = X.reshape(X.shape[0], np.product(X.shape[1:])).T
-    X = torch.from_numpy(X)
+    X = torch.from_numpy(X).type(tensor_type)
 
     return X
 

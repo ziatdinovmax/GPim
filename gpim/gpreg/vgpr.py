@@ -239,8 +239,9 @@ class vreconstructor:
         self.model.eval()
         self.likelihood.eval()
         batch_range = len(self.Xtest) // self.num_batches
-        mean = np.zeros((self.Xtest.shape[0], self.y.shape[-1]))
-        sd = np.zeros((self.Xtest.shape[0], self.y.shape[-1]))
+        dtype_ = np.float32 if self.precision == 'single' else np.float64 
+        mean = np.zeros((self.Xtest.shape[0], self.y.shape[-1]), dtype_)
+        sd = np.zeros((self.Xtest.shape[0], self.y.shape[-1]), dtype_)
         if self.verbose:
             print('Calculating predictive mean and uncertainty...')
         for i in range(self.num_batches):

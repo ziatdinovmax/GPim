@@ -128,7 +128,7 @@ class skreconstructor:
         isotropic = kwargs.get("isotropic")
         _kernel = gpytorch_kernels.get_kernel(
             kernel, input_dim, use_gpu, lengthscale=lengthscale,
-            isotropic=isotropic, precision=precision)
+            isotropic=isotropic, precision=self.precision)
         grid_points_ratio = kwargs.get("grid_points_ratio", 1.)
         self.model = skgprmodel(self.X, self.y,
                                 _kernel, self.likelihood, input_dim,
@@ -239,8 +239,9 @@ class skreconstructor:
         self.model.eval()
         self.likelihood.eval()
         batch_range = len(self.Xtest) // self.num_batches
-        mean = np.zeros((self.Xtest.shape[0]))
-        sd = np.zeros((self.Xtest.shape[0]))
+        dtype_ = np.float32 if self.precision == 'single' else np.float64 
+        mean = np.zeros((self.Xtest.shape[0]), dtype_)
+        sd = np.zeros((self.Xtest.shape[0]), dtype_)
         if self.verbose:
             print('Calculating predictive mean and uncertainty...')
         for i in range(self.num_batches):
