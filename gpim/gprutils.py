@@ -268,7 +268,6 @@ def prepare_test_data(X, **kwargs):
         Pytorch tensor with dimensions :math:`N \\times M \\times L \\times c`
     """
     precision = kwargs.get("precision", "double")
-     precision = kwargs.get("precision", "double")
     if precision == 'single':
         tensor_type = torch.FloatTensor
     else:
