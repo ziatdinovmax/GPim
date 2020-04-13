@@ -86,8 +86,8 @@ class vreconstructor:
         Initiates reconstructor parameters
         and pre-processes training and test data arrays
         """
-        precision = kwargs.get("precision", "double")
-        if precision == 'single':
+        self.precision = kwargs.get("precision", "double")
+        if self.precision == 'single':
             self.tensor_type = torch.FloatTensor
             self.tensor_type_gpu = torch.cuda.FloatTensor
         else:
@@ -101,14 +101,15 @@ class vreconstructor:
             torch.backends.cudnn.benchmark = False
             torch.set_default_tensor_type(self.tensor_type_gpu)
         input_dim = np.ndim(y) - 1
-        X, y = gprutils.prepare_training_data(X, y, vector_valued=True)
+        X, y = gprutils.prepare_training_data(
+            X, y, vector_valued=True, precision=self.precision)
         num_tasks = y.shape[-1]
         if Xtest is not None:
             self.fulldims = Xtest.shape[1:] + (num_tasks,)
         else:
             self.fulldims = X.shape[1:] + (num_tasks,)
         if Xtest is not None:
-            Xtest = gprutils.prepare_test_data(Xtest)
+            Xtest = gprutils.prepare_test_data(Xtest, precision=self.precision)
         self.X, self.y, self.Xtest = X, y, Xtest
         self.toeplitz = gpytorch.settings.use_toeplitz(True)
         maxroot = kwargs.get("maxroot", 100)
@@ -123,8 +124,8 @@ class vreconstructor:
         self.likelihood = gpytorch.likelihoods.MultitaskGaussianLikelihood(num_tasks)
         isotropic = kwargs.get("isotropic")
         _kernel = gpytorch_kernels.get_kernel(
-            kernel, input_dim, use_gpu,
-            lengthscale=lengthscale, isotropic=isotropic)
+            kernel, input_dim, use_gpu, lengthscale=lengthscale,
+            isotropic=isotropic, precision=self.precision)
 
         if not independent:
             self.model = vgprmodel(self.X, self.y,
@@ -223,7 +224,8 @@ class vreconstructor:
                 UserWarning)
             self.Xtest = self.X
         elif Xtest is not None:
-            self.Xtest = gprutils.prepare_test_data(Xtest)
+            self.Xtest = gprutils.prepare_test_data(
+                Xtest, precision=self.precision)
             self.fulldims = Xtest.shape[1:] + (self.y.shape[-1],)
             if next(self.model.parameters()).is_cuda:
                 self.Xtest = self.Xtest.cuda()

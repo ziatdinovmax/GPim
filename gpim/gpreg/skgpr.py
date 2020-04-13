@@ -90,8 +90,8 @@ class skreconstructor:
         Initiates reconstructor parameters
         and pre-processes training and test data arrays
         """
-        precision = kwargs.get("precision", "double")
-        if precision == 'single':
+        self.precision = kwargs.get("precision", "double")
+        if self.precision == 'single':
             self.tensor_type = torch.FloatTensor
             self.tensor_type_gpu = torch.cuda.FloatTensor
         else:
@@ -109,9 +109,9 @@ class skreconstructor:
             self.fulldims = Xtest.shape[1:]
         else:
             self.fulldims = X.shape[1:]
-        X, y = gprutils.prepare_training_data(X, y)
+        X, y = gprutils.prepare_training_data(X, y, precision=self.precision)
         if Xtest is not None:
-            Xtest = gprutils.prepare_test_data(Xtest)
+            Xtest = gprutils.prepare_test_data(Xtest, precision=self.precision)
         self.X, self.y, self.Xtest = X, y, Xtest
         self.do_ski = sparse
         self.toeplitz = gpytorch.settings.use_toeplitz(True)
@@ -225,7 +225,8 @@ class skreconstructor:
                 UserWarning)
             self.Xtest = self.X
         elif Xtest is not None:
-            self.Xtest = gprutils.prepare_test_data(Xtest)
+            self.Xtest = gprutils.prepare_test_data(
+                Xtest, precision=self.precision)
             self.fulldims = Xtest.shape[1:]
             if next(self.model.parameters()).is_cuda:
                 self.Xtest = self.Xtest.cuda()

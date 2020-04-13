@@ -87,8 +87,8 @@ class reconstructor:
         Initiates reconstructor parameters
         and pre-processes training and test data arrays
         """
-        precision = kwargs.get("precision", "double")
-        if precision == 'single':
+        self.precision = kwargs.get("precision", "double")
+        if self.precision == 'single':
             self.tensor_type = torch.FloatTensor
             self.tensor_type_gpu = torch.cuda.FloatTensor
         else:
@@ -109,7 +109,8 @@ class reconstructor:
             torch.set_default_tensor_type(self.tensor_type)
             use_gpu = False
         input_dim = np.ndim(y)
-        self.X, self.y = gprutils.prepare_training_data(X, y)
+        self.X, self.y = gprutils.prepare_training_data(
+            X, y, precision=self.precision)
         self.do_sparse = sparse
         if lengthscale is None and kwargs.get("isotropic") is None:
             lengthscale = [[0. for l in range(input_dim)],
@@ -118,13 +119,14 @@ class reconstructor:
             lengthscale = [0., np.mean(y.shape) / 2]
         kernel = pyro_kernels.get_kernel(
             kernel, input_dim, lengthscale, use_gpu,
-            amplitude=kwargs.get('amplitude'), precision=precision)
+            amplitude=kwargs.get('amplitude'), precision=self.precision)
         if Xtest is not None:
             self.fulldims = Xtest.shape[1:]
         else:
             self.fulldims = X.shape[1:]
         if Xtest is not None:
-            self.Xtest = gprutils.prepare_test_data(Xtest)
+            self.Xtest = gprutils.prepare_test_data(
+                Xtest, precision=self.precision)
         else:
             self.Xtest = Xtest
         if use_gpu:
@@ -225,7 +227,8 @@ class reconstructor:
                 UserWarning)
             self.Xtest = self.X
         elif Xtest is not None:
-            self.Xtest = gprutils.prepare_test_data(Xtest)
+            self.Xtest = gprutils.prepare_test_data(
+                Xtest, precision=self.precision)
             self.fulldims = Xtest.shape[1:]
             if next(self.model.parameters()).is_cuda:
                 self.Xtest = self.Xtest.cuda()

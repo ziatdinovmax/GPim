@@ -237,10 +237,10 @@ def prepare_training_data(X, y, vector_valued=False, **kwargs):
     """
     precision = kwargs.get("precision", "double")
     if precision == 'single':
-        torch.set_default_tensor_type(torch.FloatTensor)
+        tensor_type = torch.FloatTensor
     else:
-        torch.set_default_tensor_type(torch.DoubleTensor)
-    tor = lambda n: torch.from_numpy(n)
+        tensor_type = torch.DoubleTensor
+    tor = lambda n: torch.from_numpy(n).type(tensor_type)
     X = X.reshape(X.shape[0], np.product(X.shape[1:])).T
     X = tor(X[~np.isnan(X).any(axis=1)])
     if vector_valued:
