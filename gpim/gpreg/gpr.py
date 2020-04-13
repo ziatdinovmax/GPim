@@ -66,6 +66,8 @@ class reconstructor:
         seed (int):
             for reproducibility
         **amplitude (float): kernel variance or amplitude squared
+        **precision (str):
+            Choose between single ('single') and double ('double') precision
     """
     def __init__(self,
                  X,
@@ -85,6 +87,13 @@ class reconstructor:
         Initiates reconstructor parameters
         and pre-processes training and test data arrays
         """
+        precision = kwargs.get("precision", "double")
+        if precision == 'single':
+            self.tensor_type = torch.FloatTensor
+            self.tensor_type_gpu = torch.cuda.FloatTensor
+        else:
+            self.tensor_type = torch.DoubleTensor
+            self.tensor_type_gpu = torch.cuda.DoubleTensor
         self.verbose = verbose
         torch.manual_seed(seed)
         pyro.set_rng_seed(seed)
@@ -94,10 +103,10 @@ class reconstructor:
             torch.cuda.manual_seed_all(seed)
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
-            torch.set_default_tensor_type(torch.cuda.DoubleTensor)
+            torch.set_default_tensor_type(self.tensor_type_gpu)
             use_gpu = True
         else:
-            torch.set_default_tensor_type(torch.DoubleTensor)
+            torch.set_default_tensor_type(self.tensor_type)
             use_gpu = False
         input_dim = np.ndim(y)
         self.X, self.y = gprutils.prepare_training_data(X, y)
@@ -255,7 +264,7 @@ class reconstructor:
         mean, sd = self.predict()
         if next(self.model.parameters()).is_cuda:
             self.model.cpu()
-            torch.set_default_tensor_type(torch.DoubleTensor)
+            torch.set_default_tensor_type(self.tensor_type)
             self.X, self.y = self.X.cpu(), self.y.cpu()
             self.Xtest = self.Xtest.cpu()
             torch.cuda.empty_cache()
