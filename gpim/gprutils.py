@@ -215,7 +215,7 @@ def do_measurement(R_true, X_true, R, X, uncertmax, measure):
     return R, X
 
 
-def prepare_training_data(X, y, vector_valued=False):
+def prepare_training_data(X, y, vector_valued=False, **kwargs):
     """
     Reshapes and converts data to torch tensors for GP analysis
 
@@ -227,13 +227,19 @@ def prepare_training_data(X, y, vector_valued=False):
             (for example, for xyz coordinates, *c* = 3)
         y (ndarray):
             Observations (data points) with dimensions N x M x L
+        **precision (str):
+            Choose between single ('single') and double ('double') precision
 
     Returns:
         Pytorch tensors with dimensions
         :math:`N \\times M \\times L \\times c`
         and :math:`N \\times M \\times L`
     """
-
+    precision = kwargs.get("precision", "double")
+    if precision == 'single':
+        torch.set_default_tensor_type(torch.FloatTensor)
+    else:
+        torch.set_default_tensor_type(torch.DoubleTensor)
     tor = lambda n: torch.from_numpy(n)
     X = X.reshape(X.shape[0], np.product(X.shape[1:])).T
     X = tor(X[~np.isnan(X).any(axis=1)])
@@ -246,7 +252,7 @@ def prepare_training_data(X, y, vector_valued=False):
     return X, y
 
 
-def prepare_test_data(X):
+def prepare_test_data(X, **kwargs):
     """
     Reshapes and converts data to torch tensors for GP analysis
 
@@ -255,11 +261,17 @@ def prepare_test_data(X):
             Grid indices with dimensions :math:`c \\times N \\times M \\times L`
             where *c* is equal to the number of coordinates
             (for example, for xyz coordinates, *c* = 3)
+        **precision (str):
+            Choose between single ('single') and double ('double') precision
 
     Returns:
         Pytorch tensor with dimensions :math:`N \\times M \\times L \\times c`
     """
-
+    precision = kwargs.get("precision", "double")
+    if precision == 'single':
+        torch.set_default_tensor_type(torch.FloatTensor)
+    else:
+        torch.set_default_tensor_type(torch.DoubleTensor)
     X = X.reshape(X.shape[0], np.product(X.shape[1:])).T
     X = torch.from_numpy(X)
 

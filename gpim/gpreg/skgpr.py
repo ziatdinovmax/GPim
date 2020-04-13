@@ -127,8 +127,8 @@ class skreconstructor:
         self.likelihood = gpytorch.likelihoods.GaussianLikelihood()
         isotropic = kwargs.get("isotropic")
         _kernel = gpytorch_kernels.get_kernel(
-            kernel, input_dim, use_gpu,
-            lengthscale=lengthscale, isotropic=isotropic)
+            kernel, input_dim, use_gpu, lengthscale=lengthscale,
+            isotropic=isotropic, precision=precision)
         grid_points_ratio = kwargs.get("grid_points_ratio", 1.)
         self.model = skgprmodel(self.X, self.y,
                                 _kernel, self.likelihood, input_dim,

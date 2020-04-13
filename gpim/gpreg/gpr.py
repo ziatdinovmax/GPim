@@ -118,7 +118,7 @@ class reconstructor:
             lengthscale = [0., np.mean(y.shape) / 2]
         kernel = pyro_kernels.get_kernel(
             kernel, input_dim, lengthscale, use_gpu,
-            amplitude=kwargs.get('amplitude'))
+            amplitude=kwargs.get('amplitude'), precision=precision)
         if Xtest is not None:
             self.fulldims = Xtest.shape[1:]
         else:
