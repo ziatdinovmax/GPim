@@ -30,12 +30,12 @@ class boptimizer:
 
     Args:
         X_seed (ndarray):
-            Seed sparse grid indices with dimensions :math:`c \\times N \\times M`
+            Seeded sparse grid indices with dimensions :math:`c \\times N \\times M`
             or :math:`c \\times N \\times M \\times L`
             where *c* is equal to the number of coordinates
             (for example, for *xyz* coordinates, *c* = 3)
         y_seed (ndarray):
-            Seed sparse "observations" (data points) with dimensions
+            Seeded sparse "observations" (data points) with dimensions
             :math:`N \\times M` or :math:`N \\times M \\times L`.
             Typically, for 2D image *N* and *M* are image height and width,
             whereas for 3D hyperspectral data *N* and *M* are spatial dimensions
@@ -86,19 +86,22 @@ class boptimizer:
         **beta (float or int):
             beta coefficient in the 'confidence bound' acquisition function
             (Default: 1)
-        **xi (float): 
+        **xi (float):
             xi coefficient in 'expected improvement'
             and 'probability of improvement' acquisition functions
         **use_gpu (bool):
             Uses GPU hardware accelerator when set to 'True'.
             Notice that for large datasets training model without GPU
             is extremely slow.
-        **verbose (int):
-            Level of verbosity (0, 1, or 2)
         **lscale (float):
             Lengthscale determining the separation (euclidean)
             distance between query points. Defaults to the kernel
             lengthscale at a given step
+        **extent(list of lists):
+            Define multi-dimensional data bounds. For example, for 2D data,
+            the extent parameter is [[xmin, xmax], [ymin, ymax]]
+        **verbose (int):
+            Level of verbosity (0, 1, or 2)
     """
     def __init__(self,
                  X_seed,
@@ -133,24 +136,29 @@ class boptimizer:
             X_seed, y_seed, X_full, kernel, lengthscale, sparse, indpoints,
             learning_rate, iterations, self.use_gpu, self.verbose, seed)
 
-        self.X_sparse = X_seed
-        self.y_sparse = y_seed
+        self.X_sparse = X_seed.copy()
+        self.y_sparse = y_seed.copy()
         self.X_full = X_full
-        if self.use_gpu and torch.cuda.is_available():
-            self.X_sparse = self.X_sparse.cuda()
-            self.y_sparse = self.y_sparse.cuda()
 
         self.target_function = target_function
         self.acquisition_function = acquisition_function
         self.exploration_steps = exploration_steps
         self.batch_update = batch_update
         self.batch_size = batch_size
+        self.simulate_measurement = kwargs.get("simulate_measurement", False)
+        if self.simulate_measurement:
+            self.y_true = kwargs.get("y_true")
+            if self.y_true is None:
+                raise AssertionError(
+                    "To simulate measurements, add ground truth ('y_true)")
+        self.extent = kwargs.get("extent", None)
         self.alpha = kwargs.get("alpha", 0)
         self.beta = kwargs.get("beta", 1)
         self.xi = kwargs.get("xi", 0.01)
         self.lscale = kwargs.get("lscale", None)
         self.indices_all, self.vals_all = [], []
         self.target_func_vals_all = [y_seed.copy()]
+        self.gp_predictions = []
 
     def update_posterior(self):
         """
@@ -170,9 +178,20 @@ class boptimizer:
         Evaluates target function in the new point(s)
         """
         indices = [indices] if not self.batch_update else indices
-        for idx in indices:
-            self.y_sparse[tuple(idx)] = self.target_function(idx)
-        self.X_sparse = gprutils.get_sparse_grid(self.y_sparse)
+        if self.simulate_measurement:
+            for idx in indices:
+                self.y_sparse[tuple(idx)] = self.y_true[tuple(idx)]
+        else:
+            for idx in indices:
+                if self.extent is not None:
+                    _idx = []
+                    for i, e in zip(idx, self.extent):
+                        _idx.append(i + e[0])
+                    _idx = tuple(_idx)
+                else:
+                    _idx = tuple(idx)
+                self.y_sparse[tuple(idx)] = self.target_function(_idx)
+        self.X_sparse = gprutils.get_sparse_grid(self.y_sparse, self.extent)
         self.target_func_vals_all.append(self.y_sparse.copy())
         return
 
@@ -182,20 +201,21 @@ class boptimizer:
         """
         indices_list, vals_list = [], []
         if self.acquisition_function == 'cb':
-            acq = acqfunc.confidence_bound(
+            acq, pred = acqfunc.confidence_bound(
                 self.surrogate_model, self.X_full,
                 alpha=self.alpha, beta=self.beta)
         elif self.acquisition_function == 'ei':
-            acq = acqfunc.expected_improvement(
+            acq, pred = acqfunc.expected_improvement(
                 self.surrogate_model, self.X_full,
                 self.X_sparse, xi=self.xi)
         elif self.acquisition_function == 'poi':
-            acq = acqfunc.probability_of_improvement(
+            acq, pred = acqfunc.probability_of_improvement(
                 self.surrogate_model, self.X_full,
                 self.X_sparse, xi=self.xi)
         else:
             raise NotImplementedError(
                 "Choose between 'cb', 'ei', and 'poi' acquisition functions")
+        self.gp_predictions.append(pred)
         for i in range(self.batch_size):
             amax_idx = [i[0] for i in np.where(acq == acq.max())]
             indices_list.append(amax_idx)
@@ -286,7 +306,7 @@ class boptimizer:
         e = args[0]
         if self.verbose:
             print("\nExploration step {} / {}".format(
-                e, self.exploration_steps))
+                e+1, self.exploration_steps))
         # train with seeded data
         if e == 0:
             self.surrogate_model.train()

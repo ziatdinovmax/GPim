@@ -30,13 +30,23 @@ def get_kernel(kernel_type, input_dim, lengthscale, use_gpu=False, **kwargs):
         **amplitude (list with two floats):
             determines bounds on kernel amplitude parameter
             (default is from 1e-4 to 10)
+        **precision (str):
+            Choose between single ('single') and double ('double') precision
     Returns:
         Pyro kernel object
     """
-    if use_gpu and torch.cuda.is_available():
-        torch.set_default_tensor_type(torch.cuda.DoubleTensor)
+    precision = kwargs.get("precision", "double")
+    if precision == 'single':
+        tensor_type = torch.FloatTensor
+        tensor_type_gpu = torch.cuda.FloatTensor
     else:
-        torch.set_default_tensor_type(torch.DoubleTensor)
+        tensor_type = torch.DoubleTensor
+        tensor_type_gpu = torch.cuda.DoubleTensor
+
+    if use_gpu and torch.cuda.is_available():
+        torch.set_default_tensor_type(tensor_type_gpu)
+    else:
+        torch.set_default_tensor_type(tensor_type)
 
     amp = kwargs.get('amplitude')
     lscale = lengthscale

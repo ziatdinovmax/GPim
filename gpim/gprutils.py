@@ -215,7 +215,7 @@ def do_measurement(R_true, X_true, R, X, uncertmax, measure):
     return R, X
 
 
-def prepare_training_data(X, y, vector_valued=False):
+def prepare_training_data(X, y, vector_valued=False, **kwargs):
     """
     Reshapes and converts data to torch tensors for GP analysis
 
@@ -227,14 +227,20 @@ def prepare_training_data(X, y, vector_valued=False):
             (for example, for xyz coordinates, *c* = 3)
         y (ndarray):
             Observations (data points) with dimensions N x M x L
+        **precision (str):
+            Choose between single ('single') and double ('double') precision
 
     Returns:
         Pytorch tensors with dimensions
         :math:`N \\times M \\times L \\times c`
         and :math:`N \\times M \\times L`
     """
-
-    tor = lambda n: torch.from_numpy(n)
+    precision = kwargs.get("precision", "double")
+    if precision == 'single':
+        tensor_type = torch.FloatTensor
+    else:
+        tensor_type = torch.DoubleTensor
+    tor = lambda n: torch.from_numpy(n).type(tensor_type)
     X = X.reshape(X.shape[0], np.product(X.shape[1:])).T
     X = tor(X[~np.isnan(X).any(axis=1)])
     if vector_valued:
@@ -246,7 +252,7 @@ def prepare_training_data(X, y, vector_valued=False):
     return X, y
 
 
-def prepare_test_data(X):
+def prepare_test_data(X, **kwargs):
     """
     Reshapes and converts data to torch tensors for GP analysis
 
@@ -255,13 +261,19 @@ def prepare_test_data(X):
             Grid indices with dimensions :math:`c \\times N \\times M \\times L`
             where *c* is equal to the number of coordinates
             (for example, for xyz coordinates, *c* = 3)
+        **precision (str):
+            Choose between single ('single') and double ('double') precision
 
     Returns:
         Pytorch tensor with dimensions :math:`N \\times M \\times L \\times c`
     """
-
+    precision = kwargs.get("precision", "double")
+    if precision == 'single':
+        tensor_type = torch.FloatTensor
+    else:
+        tensor_type = torch.DoubleTensor
     X = X.reshape(X.shape[0], np.product(X.shape[1:])).T
-    X = torch.from_numpy(X)
+    X = torch.from_numpy(X).type(tensor_type)
 
     return X
 
@@ -286,13 +298,16 @@ def get_grid_indices(R, dense_x=1.):
     return X_full, X_sparse
 
 
-def get_full_grid(R, dense_x=1.):
+def get_full_grid(R, extent=None, dense_x=1.):
     """
     Creates grid indices for 2D-4D numpy arrays
 
     Args:
         R (ndarray):
             Grid measurements as 2D-4D numpy array
+        extent (list of lists):
+            Define multi-dimensional data bounds. For example, for 2D data,
+            the extent parameter is [[xmin, xmax], [ymin, ymax]]
         dense_x (float):
             Determines grid density
             (can be increased at prediction stage)
@@ -303,22 +318,54 @@ def get_full_grid(R, dense_x=1.):
     dense_x = np.float(dense_x)
     if np.ndim(R) == 2:
         e1, e2 = R.shape
-        c1, c2 = np.mgrid[:e1:dense_x, :e2:dense_x]
+        if extent:
+            dx = extent[0][1] - extent[0][0]
+            dy = extent[1][1] - extent[1][0]
+            dx = dense_x / (e1//dx)
+            dy = dense_x / (e2//dy)
+            c1, c2 = np.mgrid[
+                extent[0][0]:extent[0][1]:dx, extent[1][0]:extent[1][1]:dy]
+        else:
+            c1, c2 = np.mgrid[:e1:dense_x, :e2:dense_x]
         X_grid = np.array([c1, c2])
     elif np.ndim(R) == 3:
         e1, e2, e3 = R.shape
-        c1, c2, c3 = np.mgrid[:e1:dense_x, :e2:dense_x, :e3:dense_x]
+        if extent:
+            dx = extent[0][1] - extent[0][0]
+            dy = extent[1][1] - extent[1][0]
+            dz = extent[2][1] - extent[2][0]
+            dx = dense_x / (e1//dx)
+            dy = dense_x / (e2//dy)
+            dz = dense_x / (e3//dz)
+            c1, c2 = np.mgrid[
+                extent[0][0]:extent[0][1]:dx, extent[1][0]:extent[1][1]:dy,
+                extent[2][0]:extent[2][1]:dz]
+        else:
+            c1, c2, c3 = np.mgrid[:e1:dense_x, :e2:dense_x, :e3:dense_x]
         X_grid = np.array([c1, c2, c3])
     elif np.ndim(R) == 4:
         e1, e2, e3, e4 = R.shape
-        c1, c2, c3, c4 = np.mgrid[:e1:dense_x, :e2:dense_x, :e3:dense_x, :e4:dense_x]
+        if extent:
+            dx = extent[0][1] - extent[0][0]
+            dy = extent[1][1] - extent[1][0]
+            dz = extent[2][1] - extent[2][0]
+            df = extent[3][1] - extent[3][0]
+            dx = dense_x / (e1//dx)
+            dy = dense_x / (e2//dy)
+            dz = dense_x / (e3//dz)
+            df = dense_x / (e4//df)
+            c1, c2 = np.mgrid[
+                extent[0][0]:extent[0][1]:dx, extent[1][0]:extent[1][1]:dy,
+                extent[2][0]:extent[2][1]:dz, extent[3][0]:extent[3][1]:df]
+        else:
+            c1, c2, c3, c4 = np.mgrid[:e1:dense_x, :e2:dense_x, :e3:dense_x, :e4:dense_x]
         X_grid = np.array([c1, c2, c3, c4])
     else:
         raise NotImplementedError("Currently works only for 2D-4D sets")
     return X_grid
 
 
-def get_sparse_grid(R):
+def get_sparse_grid(R, extent=None):
     """
     Returns sparse grid for sparse image data
 
@@ -332,7 +379,7 @@ def get_sparse_grid(R):
     if not np.isnan(R).any():
         raise NotImplementedError(
             "Missing values in sparse data must be represented as NaNs")
-    X_true = get_full_grid(R)
+    X_true = get_full_grid(R, extent)
     if np.ndim(R) == 2:
         e1, e2 = R.shape
         X = X_true.copy().reshape(2, e1*e2)

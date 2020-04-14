@@ -70,6 +70,8 @@ class skreconstructor:
             Number of batches for splitting the Xtest array
             (for large datasets, you may not have enough GPU memory
             to process the entire dataset at once)
+        **precision (str):
+            Choose between single ('single') and double ('double') precision
     """
     def __init__(self,
                  X,
@@ -88,21 +90,28 @@ class skreconstructor:
         Initiates reconstructor parameters
         and pre-processes training and test data arrays
         """
+        self.precision = kwargs.get("precision", "double")
+        if self.precision == 'single':
+            self.tensor_type = torch.FloatTensor
+            self.tensor_type_gpu = torch.cuda.FloatTensor
+        else:
+            self.tensor_type = torch.DoubleTensor
+            self.tensor_type_gpu = torch.cuda.DoubleTensor
         torch.manual_seed(seed)
         if use_gpu and torch.cuda.is_available():
             torch.cuda.empty_cache()
             torch.cuda.manual_seed_all(seed)
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
-            torch.set_default_tensor_type(torch.cuda.DoubleTensor)
+            torch.set_default_tensor_type(self.tensor_type_gpu)
         input_dim = np.ndim(y)
         if Xtest is not None:
             self.fulldims = Xtest.shape[1:]
         else:
             self.fulldims = X.shape[1:]
-        X, y = gprutils.prepare_training_data(X, y)
+        X, y = gprutils.prepare_training_data(X, y, precision=self.precision)
         if Xtest is not None:
-            Xtest = gprutils.prepare_test_data(Xtest)
+            Xtest = gprutils.prepare_test_data(Xtest, precision=self.precision)
         self.X, self.y, self.Xtest = X, y, Xtest
         self.do_ski = sparse
         self.toeplitz = gpytorch.settings.use_toeplitz(True)
@@ -114,12 +123,12 @@ class skreconstructor:
                 self.Xtest = self.Xtest.cuda()
             self.toeplitz = gpytorch.settings.use_toeplitz(False)
         else:
-            torch.set_default_tensor_type(torch.DoubleTensor)
+            torch.set_default_tensor_type(self.tensor_type)
         self.likelihood = gpytorch.likelihoods.GaussianLikelihood()
         isotropic = kwargs.get("isotropic")
         _kernel = gpytorch_kernels.get_kernel(
-            kernel, input_dim, use_gpu,
-            lengthscale=lengthscale, isotropic=isotropic)
+            kernel, input_dim, use_gpu, lengthscale=lengthscale,
+            isotropic=isotropic, precision=self.precision)
         grid_points_ratio = kwargs.get("grid_points_ratio", 1.)
         self.model = skgprmodel(self.X, self.y,
                                 _kernel, self.likelihood, input_dim,
@@ -216,7 +225,8 @@ class skreconstructor:
                 UserWarning)
             self.Xtest = self.X
         elif Xtest is not None:
-            self.Xtest = gprutils.prepare_test_data(Xtest)
+            self.Xtest = gprutils.prepare_test_data(
+                Xtest, precision=self.precision)
             self.fulldims = Xtest.shape[1:]
             if next(self.model.parameters()).is_cuda:
                 self.Xtest = self.Xtest.cuda()
@@ -229,8 +239,9 @@ class skreconstructor:
         self.model.eval()
         self.likelihood.eval()
         batch_range = len(self.Xtest) // self.num_batches
-        mean = np.zeros((self.Xtest.shape[0]))
-        sd = np.zeros((self.Xtest.shape[0]))
+        dtype_ = np.float32 if self.precision == 'single' else np.float64 
+        mean = np.zeros((self.Xtest.shape[0]), dtype_)
+        sd = np.zeros((self.Xtest.shape[0]), dtype_)
         if self.verbose:
             print('Calculating predictive mean and uncertainty...')
         for i in range(self.num_batches):
@@ -255,7 +266,7 @@ class skreconstructor:
         mean, sd = self.predict()
         if next(self.model.parameters()).is_cuda:
             self.model.cpu()
-            torch.set_default_tensor_type(torch.DoubleTensor)
+            torch.set_default_tensor_type(self.tensor_type)
             self.X, self.y = self.X.cpu(), self.y.cpu()
             self.Xtest = self.Xtest.cpu()
             torch.cuda.empty_cache()

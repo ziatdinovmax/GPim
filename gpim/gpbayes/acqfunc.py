@@ -23,11 +23,15 @@ def confidence_bound(gpmodel, X_full, **kwargs):
             :math:`\\alpha` coefficient in :math:`\\alpha \\mu + \\beta \\sigma`
         **beta (float):
             :math:`\\beta` coefficient in :math:`\\alpha \\mu + \\beta \\sigma`
+    
+    Returns:
+        Acquisition function and GP prediction (mean + standard devaition)
     """
     alpha = kwargs.get("alpha", 0)
     beta = kwargs.get("beta", 1)
     mean, sd = gpmodel.predict(X_full, verbose=0)
-    return alpha * mean + beta * sd
+    acq = alpha * mean + beta * sd
+    return acq, (mean, sd)
 
 
 def expected_improvement(gpmodel, X_full, X_sparse, **kwargs):
@@ -44,6 +48,9 @@ def expected_improvement(gpmodel, X_full, X_sparse, **kwargs):
             Sparse grid indices
         **xi (float):
             xi constant value
+    
+    Returns:
+        Acquisition function and GP prediction (mean + standard devaition)
     """
     xi = kwargs.get("xi", 0.01)
     mean, sd = gpmodel.predict(X_full, verbose=0)
@@ -52,7 +59,8 @@ def expected_improvement(gpmodel, X_full, X_sparse, **kwargs):
     mean_sample_opt = np.nanmax(mean_sample)
     imp = mean - mean_sample_opt - xi
     z = imp / sd
-    return imp * norm.cdf(z) + sd * norm.pdf(z)
+    acq = imp * norm.cdf(z) + sd * norm.pdf(z)
+    return acq, (mean, sd)
 
 
 def probability_of_improvement(gpmodel, X_full, X_sparse, **kwargs):
@@ -69,6 +77,9 @@ def probability_of_improvement(gpmodel, X_full, X_sparse, **kwargs):
             Sparse grid indices
         **xi (float):
             xi constant value
+    
+    Returns:
+        Acquisition function and GP prediction (mean + standard devaition)
     """
     xi = kwargs.get("xi", 0.01)
     mean, sd = gpmodel.predict(X_full, verbose=0)
@@ -77,4 +88,5 @@ def probability_of_improvement(gpmodel, X_full, X_sparse, **kwargs):
     mean_sample_opt = np.nanmax(mean_sample)
     z = mean - mean_sample_opt - xi
     z = z / sd
-    return norm.cdf(z)
+    acq = norm.cdf(z)
+    return acq, (mean, sd)

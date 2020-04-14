@@ -27,13 +27,23 @@ def get_kernel(kernel_type, input_dim, on_gpu=True, **kwargs):
             number of elements in each list is equal to the input dimensions
         **isotropic (bool):
             one kernel lengthscale in all dimensions
+        **precision (str):
+            Choose between single ('single') and double ('double') precision
     Returns:
         kernel object
     """
-    if on_gpu and torch.cuda.is_available():
-        torch.set_default_tensor_type(torch.cuda.DoubleTensor)
+    precision = kwargs.get("precision", "double")
+    if precision == 'single':
+        tensor_type = torch.FloatTensor
+        tensor_type_gpu = torch.cuda.FloatTensor
     else:
-        torch.set_default_tensor_type(torch.DoubleTensor)
+        tensor_type = torch.DoubleTensor
+        tensor_type_gpu = torch.cuda.DoubleTensor
+
+    if on_gpu and torch.cuda.is_available():
+        torch.set_default_tensor_type(tensor_type_gpu)
+    else:
+        torch.set_default_tensor_type(tensor_type)
 
     lscale = kwargs.get('lengthscale')
     isotropic = kwargs.get("isotropic")

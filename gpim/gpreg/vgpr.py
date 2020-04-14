@@ -86,22 +86,30 @@ class vreconstructor:
         Initiates reconstructor parameters
         and pre-processes training and test data arrays
         """
+        self.precision = kwargs.get("precision", "double")
+        if self.precision == 'single':
+            self.tensor_type = torch.FloatTensor
+            self.tensor_type_gpu = torch.cuda.FloatTensor
+        else:
+            self.tensor_type = torch.DoubleTensor
+            self.tensor_type_gpu = torch.cuda.DoubleTensor
         torch.manual_seed(seed)
         if use_gpu and torch.cuda.is_available():
             torch.cuda.empty_cache()
             torch.cuda.manual_seed_all(seed)
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
-            torch.set_default_tensor_type(torch.cuda.DoubleTensor)
+            torch.set_default_tensor_type(self.tensor_type_gpu)
         input_dim = np.ndim(y) - 1
-        X, y = gprutils.prepare_training_data(X, y, vector_valued=True)
+        X, y = gprutils.prepare_training_data(
+            X, y, vector_valued=True, precision=self.precision)
         num_tasks = y.shape[-1]
         if Xtest is not None:
             self.fulldims = Xtest.shape[1:] + (num_tasks,)
         else:
             self.fulldims = X.shape[1:] + (num_tasks,)
         if Xtest is not None:
-            Xtest = gprutils.prepare_test_data(Xtest)
+            Xtest = gprutils.prepare_test_data(Xtest, precision=self.precision)
         self.X, self.y, self.Xtest = X, y, Xtest
         self.toeplitz = gpytorch.settings.use_toeplitz(True)
         maxroot = kwargs.get("maxroot", 100)
@@ -112,12 +120,12 @@ class vreconstructor:
                 self.Xtest = self.Xtest.cuda()
             self.toeplitz = gpytorch.settings.use_toeplitz(False)
         else:
-            torch.set_default_tensor_type(torch.DoubleTensor)
+            torch.set_default_tensor_type(self.tensor_type)
         self.likelihood = gpytorch.likelihoods.MultitaskGaussianLikelihood(num_tasks)
         isotropic = kwargs.get("isotropic")
         _kernel = gpytorch_kernels.get_kernel(
-            kernel, input_dim, use_gpu,
-            lengthscale=lengthscale, isotropic=isotropic)
+            kernel, input_dim, use_gpu, lengthscale=lengthscale,
+            isotropic=isotropic, precision=self.precision)
 
         if not independent:
             self.model = vgprmodel(self.X, self.y,
@@ -216,7 +224,8 @@ class vreconstructor:
                 UserWarning)
             self.Xtest = self.X
         elif Xtest is not None:
-            self.Xtest = gprutils.prepare_test_data(Xtest)
+            self.Xtest = gprutils.prepare_test_data(
+                Xtest, precision=self.precision)
             self.fulldims = Xtest.shape[1:] + (self.y.shape[-1],)
             if next(self.model.parameters()).is_cuda:
                 self.Xtest = self.Xtest.cuda()
@@ -230,8 +239,9 @@ class vreconstructor:
         self.model.eval()
         self.likelihood.eval()
         batch_range = len(self.Xtest) // self.num_batches
-        mean = np.zeros((self.Xtest.shape[0], self.y.shape[-1]))
-        sd = np.zeros((self.Xtest.shape[0], self.y.shape[-1]))
+        dtype_ = np.float32 if self.precision == 'single' else np.float64 
+        mean = np.zeros((self.Xtest.shape[0], self.y.shape[-1]), dtype_)
+        sd = np.zeros((self.Xtest.shape[0], self.y.shape[-1]), dtype_)
         if self.verbose:
             print('Calculating predictive mean and uncertainty...')
         for i in range(self.num_batches):
@@ -260,7 +270,7 @@ class vreconstructor:
         mean, sd = self.predict()
         if next(self.model.parameters()).is_cuda:
             self.model.cpu()
-            torch.set_default_tensor_type(torch.DoubleTensor)
+            torch.set_default_tensor_type(self.tensor_type)
             self.X, self.y = self.X.cpu(), self.y.cpu()
             self.Xtest = self.Xtest.cpu()
             torch.cuda.empty_cache()
