@@ -9,6 +9,7 @@ images and image-like data.
 Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
 """
 
+import types
 import torch
 import numpy as np
 from scipy import spatial
@@ -25,7 +26,7 @@ class boptimizer:
     the objective (target) function :math:`f` using GP; ii) using the posterior
     to derive an acquistion function :math:`\\alpha (x)`; iii) using the
     acquisition function to derive the next query point according to
-    :math:`x_{next}=argmin(\\alpha (x))`; iv) evaluating :math:`f` in
+    :math:`x_{next}=argmax(\\alpha (x))`; iv) evaluating :math:`f` in
     :math:`x_{next}` and updating the posterior.
 
     Args:
@@ -46,10 +47,12 @@ class boptimizer:
         target_function (python function):
             Target (or objective) function. Takes a list of indices and
             returns a function value as a float.
-        acquisition_function (str):
-            Acquisition function choise
-            ('cb' is confidence bound, 'ei' is expected improvement,
-            'poi' is a probability of improvement)
+        acquisition_function (str or python function):
+            Acquisition function choise.'cb' is confidence bound, 'ei' is
+            expected improvement, 'poi' is a probability of improvement.
+            One can also pass a custom function, which takes GP model,
+            full grid and sparse grid as parameters and returns
+            acquisition function values with GP prediction (mean + sd)
         exploration_steps (int):
             Number of exploration-exploitation steps
             (the expltation-exploration trade-off is
@@ -93,10 +96,27 @@ class boptimizer:
             Uses GPU hardware accelerator when set to 'True'.
             Notice that for large datasets training model without GPU
             is extremely slow.
-        **lscale (float):
-            Lengthscale determining the separation (euclidean)
-            distance between query points. Defaults to the kernel
-            lengthscale at a given step
+        **dscale (float):
+            Distance parameter used in boptimizer.checkvalues or in 
+            boptimizer.update_points, For boptimizer.checkvalues,
+            it is used in conjuction with 'alpha' and 'points_memory'
+            parameters to select the next query point using the information
+            about the previous points. Defaults to 0. For boptimizer.update_points,
+            it is used to return a batch of points which are no closer
+            to each other than dscale value. Defauts to kernel average lenghtscale
+            at a given step.
+        **alpha (float):
+            alpha coefficient, value between 0 and 1.
+            Used in boptimizer.checkvalues together with 'dscale' parameter
+            to determine how close the next query point can be to the previous points.
+        **points_memory (int):
+            Number of previous points to remember when using 'dscale' criteria
+        **exit_strategy (0 or 1):
+            Exit strategy for boptimizer.checkvalues when none
+            of the points satisfies the imposed selection criteria.
+            0 means that a random value will be chosen, while 1
+            means that the last point in the list will be chosen
+            (the length of the list is defined by 'batch_size' parameter)
         **extent(list of lists):
             Define multi-dimensional data bounds. For example, for 2D data,
             the extent parameter is [[xmin, xmax], [ymin, ymax]]
@@ -116,7 +136,7 @@ class boptimizer:
                  lengthscale=None,
                  sparse=False,
                  indpoints=None,
-                 iterations=1000,
+                 gp_iterations=1000,
                  seed=0,
                  **kwargs):
         """
@@ -134,7 +154,7 @@ class boptimizer:
 
         self.surrogate_model = gpr.reconstructor(
             X_seed, y_seed, X_full, kernel, lengthscale, sparse, indpoints,
-            learning_rate, iterations, self.use_gpu, self.verbose, seed)
+            learning_rate, gp_iterations, self.use_gpu, self.verbose, seed)
 
         self.X_sparse = X_seed.copy()
         self.y_sparse = y_seed.copy()
@@ -152,13 +172,14 @@ class boptimizer:
                 raise AssertionError(
                     "To simulate measurements, add ground truth ('y_true)")
         self.extent = kwargs.get("extent", None)
-        self.alpha = kwargs.get("alpha", 0)
-        self.beta = kwargs.get("beta", 1)
+        self.alpha, self.beta = kwargs.get("alpha", 0), kwargs.get("beta", 1)
         self.xi = kwargs.get("xi", 0.01)
-        self.lscale = kwargs.get("lscale", None)
+        self.dscale = kwargs.get("dscale", None)
+        self.alpha = kwargs.get("alpha", 0.8)
+        self.points_mem = kwargs.get("points_memory", 10)
+        self.exit_strategy = kwargs.get("exit_strategy", 0)
         self.indices_all, self.vals_all = [], []
-        self.target_func_vals_all = [y_seed.copy()]
-        self.gp_predictions = []
+        self.target_func_vals_all, self.gp_predictions = [y_seed.copy()], []
 
     def update_posterior(self):
         """
@@ -212,9 +233,12 @@ class boptimizer:
             acq, pred = acqfunc.probability_of_improvement(
                 self.surrogate_model, self.X_full,
                 self.X_sparse, xi=self.xi)
+        elif isinstance(self.acquisition_function, types.FunctionType):
+            acq, pred = self.acquisition_function(
+                self.surrogate_model, self.X_full, self.X_sparse)
         else:
             raise NotImplementedError(
-                "Choose between 'cb', 'ei', and 'poi' acquisition functions")
+                "Choose between 'cb', 'ei', and 'poi' acquisition functions or define your own")
         self.gp_predictions.append(pred)
         for i in range(self.batch_size):
             amax_idx = [i[0] for i in np.where(acq == acq.max())]
@@ -223,28 +247,33 @@ class boptimizer:
             acq[tuple(amax_idx)] = acq.min() - 1
         if not self.batch_update:
             return vals_list, indices_list
-        if self.lscale is None:
-            lscale_ = self.surrogate_model.model.kernel.lengthscale.mean().item()
+        if self.dscale is None:
+            dscale_ = self.surrogate_model.model.kernel.lengthscale.mean().item()
         else:
-            lscale_ = self.lscale
+            dscale_ = self.dscale
         vals_list, indices_list = self.update_points(
             np.array(vals_list),
             np.vstack(indices_list),
-            lscale_)
+            dscale_)
         return vals_list, indices_list
 
     @classmethod
-    def update_points(cls, acqfunc_values, indices, lscale):
+    def update_points(cls, acqfunc_values, indices, dscale):
         """
-        Returns a batch of query points whose separation distance
-        is determined by kernel lengthscale
+        Takes arrays of query points (indices and values) corresponding to
+        first *n* max values of the acquisition function and returns a batch
+        two lists with updated query points (indices and values) whose
+        separation distance is determined by kernel lengthscale.
+        Notice that the updated lists will contain less points
+        than the original ones.
+
         Args:
             acqfunc_values (ndarray):
                 (*N*,) numpy array with values of acquisition function
             indices (ndarray):
                 (*N*, *c*) numpy array with corresponding indices,
                 where c ia a number of dimensions of the dataset
-            lscale (float):
+            dscale (float):
                 kernel lengthscale
 
         Returns:
@@ -259,7 +288,7 @@ class boptimizer:
         while new_max > minval - 1:
             max_val_all.append(new_max)
             max_id_all.append(new_max_id)
-            nn_indices = tree.query_ball_point(ck, lscale)
+            nn_indices = tree.query_ball_point(ck, dscale)
             acqfunc_values[nn_indices] = minval - 1
             new_max = acqfunc_values.max()
             new_max_id = np.argmax(acqfunc_values)
@@ -268,9 +297,10 @@ class boptimizer:
 
     def checkvalues(self, idx_list, val_list):
         """
-        Checks if the indices were already used
-        and if so selects the next-in-line indices
-        (helps not to get stuck in one point during the exploration-exploitation)
+        Checks if a current point was already used or if the euclidian
+        distances from the current point to the previous points
+        are above a value controlled by parameter 'alpha',
+        and if so then it selects the next-in-line point.
 
         Args:
             idx_list (list of lists with ints):
@@ -284,16 +314,35 @@ class boptimizer:
             if no previous occurences found.
             Otherwise, returns the next/closest value from the list.
         """
+
+        def dist(idx):
+            idx_prev = self.indices_all[:self.points_mem]
+            # Calculate distances between current point and previous n points
+            d_all = [np.linalg.norm(np.array(idx) - np.array(i)) for i in idx_prev]
+            # Calculate weighting coefficient for each distance
+            dscale_all = [dscale_*self.alpha**i for i in range(len(idx_prev))]
+            # Check if each distance satisfies the imposed criteria
+            bool_ = 0 in [d > l for (d, l) in zip(d_all[::-1], dscale_all)]
+            return bool_
+
+        dscale_ = 0 if self.dscale is None else self.dscale
         _idx = 0
         if self.verbose:
             print('Acquisition function value {} at {}'.format(
                 val_list[_idx], idx_list[_idx]))
         if len(self.indices_all) == 0:
             return idx_list[_idx], val_list[_idx]
-        while 1 in [1 for a in self.indices_all if a == idx_list[_idx]]:
+        while (1 in [1 for a in self.indices_all if a == idx_list[_idx]]
+                or dist(idx_list[_idx])):
             if self.verbose:
                 print("Finding the next max point...")
-            _idx = _idx + 1
+            _idx = _idx + 1 
+            if _idx == len(idx_list):
+                _idx = np.random.randint(0, len(idx_list)) if self.exit_strategy else -1
+                if self.verbose:
+                    print('Index out of list. Exiting with acquisition function value {} at {}'.format(
+                        val_list[_idx], idx_list[_idx]))
+                break
             if self.verbose:
                 print('Acquisition function value {} at {}'.format(
                     val_list[_idx], idx_list[_idx]))
