@@ -225,6 +225,8 @@ class boptimizer:
         Calculates next query point(s)
         """
         indices_list, vals_list = [], []
+        if self.verbose:
+            print("Computing acquisition function...")
         if self.acquisition_function == 'cb':
             acq, pred = acqfunc.confidence_bound(
                 self.surrogate_model, self.X_full,
@@ -334,7 +336,7 @@ class boptimizer:
         dscale_ = 0 if self.dscale is None else self.dscale
         _idx = 0
         if self.verbose:
-            print('Acquisition function value {} at {}'.format(
+            print('Acquisition function max value {} at {}'.format(
                 val_list[_idx], idx_list[_idx]))
         if len(self.indices_all) == 0:
             return idx_list[_idx], val_list[_idx]
@@ -350,7 +352,7 @@ class boptimizer:
                         val_list[_idx], idx_list[_idx]))
                 break
             if self.verbose:
-                print('Acquisition function value {} at {}'.format(
+                print('Acquisition function max value {} at {}'.format(
                     val_list[_idx], idx_list[_idx]))
         return idx_list[_idx], val_list[_idx]
 
