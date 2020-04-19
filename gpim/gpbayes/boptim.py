@@ -80,7 +80,7 @@ class boptimizer:
             Defaults to total_number_of_points // 10.
         learning_rate (float):
             Learning rate for GP model training
-        iterations (int): Number of SVI training iteratons for GP model
+        gp_iterations (int): Number of SVI training iteratons for GP model
         seed (int):
             for reproducibility
         **alpha (float or int):
