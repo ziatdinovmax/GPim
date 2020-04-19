@@ -386,4 +386,4 @@ class boptimizer:
             self.single_step(i)
         if self.verbose:
             print("\nExploration completed")
-        return self.indices_all, self.target_func_vals_all
+        return
