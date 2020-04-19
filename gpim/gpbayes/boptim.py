@@ -80,7 +80,7 @@ class boptimizer:
             Defaults to total_number_of_points // 10.
         learning_rate (float):
             Learning rate for GP model training
-        gp_iterations (int): Number of SVI training iteratons for GP model
+        iterations (int): Number of SVI training iteratons for GP model
         seed (int):
             for reproducibility
         **alpha (float or int):
@@ -96,8 +96,11 @@ class boptimizer:
             Uses GPU hardware accelerator when set to 'True'.
             Notice that for large datasets training model without GPU
             is extremely slow.
+        **mask (ndarray):
+            Mask of ones and NaNs (NaNs are values that are not counted when
+            searching for acquisition function maximum).
         **dscale (float):
-            Distance parameter used in boptimizer.checkvalues or in 
+            Distance parameter used in boptimizer.checkvalues or in
             boptimizer.update_points, For boptimizer.checkvalues,
             it is used in conjuction with 'alpha' and 'points_memory'
             parameters to select the next query point using the information
@@ -136,7 +139,7 @@ class boptimizer:
                  lengthscale=None,
                  sparse=False,
                  indpoints=None,
-                 gp_iterations=1000,
+                 iterations=1000,
                  seed=0,
                  **kwargs):
         """
@@ -154,7 +157,7 @@ class boptimizer:
 
         self.surrogate_model = gpr.reconstructor(
             X_seed, y_seed, X_full, kernel, lengthscale, sparse, indpoints,
-            learning_rate, gp_iterations, self.use_gpu, self.verbose, seed)
+            learning_rate, iterations, self.use_gpu, self.verbose, seed)
 
         self.X_sparse = X_seed.copy()
         self.y_sparse = y_seed.copy()
@@ -178,6 +181,7 @@ class boptimizer:
         self.alpha = kwargs.get("alpha", 0.8)
         self.points_mem = kwargs.get("points_memory", 10)
         self.exit_strategy = kwargs.get("exit_strategy", 0)
+        self.mask = kwargs.get("mask", None)
         self.indices_all, self.vals_all = [], []
         self.target_func_vals_all, self.gp_predictions = [y_seed.copy()], []
 
@@ -240,11 +244,13 @@ class boptimizer:
             raise NotImplementedError(
                 "Choose between 'cb', 'ei', and 'poi' acquisition functions or define your own")
         self.gp_predictions.append(pred)
+        if self.mask is not None:
+            acq = self.mask*acq
         for i in range(self.batch_size):
-            amax_idx = [i[0] for i in np.where(acq == acq.max())]
+            amax_idx = [i[0] for i in np.where(acq == np.nanmax(acq))]
             indices_list.append(amax_idx)
-            vals_list.append(acq.max())
-            acq[tuple(amax_idx)] = acq.min() - 1
+            vals_list.append(np.nanmax(acq))
+            acq[tuple(amax_idx)] = np.nanmin(acq) - 1
         if not self.batch_update:
             return vals_list, indices_list
         if self.dscale is None:
@@ -336,7 +342,7 @@ class boptimizer:
                 or dist(idx_list[_idx])):
             if self.verbose:
                 print("Finding the next max point...")
-            _idx = _idx + 1 
+            _idx = _idx + 1
             if _idx == len(idx_list):
                 _idx = np.random.randint(0, len(idx_list)) if self.exit_strategy else -1
                 if self.verbose:
