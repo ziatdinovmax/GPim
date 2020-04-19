@@ -25,7 +25,7 @@ def confidence_bound(gpmodel, X_full, **kwargs):
             :math:`\\beta` coefficient in :math:`\\alpha \\mu + \\beta \\sigma`
     
     Returns:
-        Acquisition function and GP prediction (mean + standard devaition)
+        Acquisition function values and GP prediction (mean + stddev)
     """
     alpha = kwargs.get("alpha", 0)
     beta = kwargs.get("beta", 1)
@@ -50,7 +50,7 @@ def expected_improvement(gpmodel, X_full, X_sparse, **kwargs):
             xi constant value
     
     Returns:
-        Acquisition function and GP prediction (mean + standard devaition)
+        Acquisition function values and GP prediction (mean + stddev)
     """
     xi = kwargs.get("xi", 0.01)
     mean, sd = gpmodel.predict(X_full, verbose=0)
@@ -79,7 +79,7 @@ def probability_of_improvement(gpmodel, X_full, X_sparse, **kwargs):
             xi constant value
     
     Returns:
-        Acquisition function and GP prediction (mean + standard devaition)
+        Acquisition function values and GP prediction (mean + stddev)
     """
     xi = kwargs.get("xi", 0.01)
     mean, sd = gpmodel.predict(X_full, verbose=0)
