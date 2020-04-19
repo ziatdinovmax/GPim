@@ -183,7 +183,7 @@ class boptimizer:
         self.exit_strategy = kwargs.get("exit_strategy", 0)
         self.mask = kwargs.get("mask", None)
         self.indices_all, self.vals_all = [], []
-        self.target_func_vals_all, self.gp_predictions = [y_seed.copy()], []
+        self.target_func_vals, self.gp_predictions = [y_seed.copy()], []
 
     def update_posterior(self):
         """
@@ -217,7 +217,7 @@ class boptimizer:
                     _idx = tuple(idx)
                 self.y_sparse[tuple(idx)] = self.target_function(_idx)
         self.X_sparse = gprutils.get_sparse_grid(self.y_sparse, self.extent)
-        self.target_func_vals_all.append(self.y_sparse.copy())
+        self.target_func_vals.append(self.y_sparse.copy())
         return
 
     def next_point(self):
