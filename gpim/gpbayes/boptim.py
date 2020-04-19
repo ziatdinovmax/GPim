@@ -136,7 +136,7 @@ class boptimizer:
                  lengthscale=None,
                  sparse=False,
                  indpoints=None,
-                 iterations=1000,
+                 gp_iterations=1000,
                  seed=0,
                  **kwargs):
         """
@@ -154,7 +154,7 @@ class boptimizer:
 
         self.surrogate_model = gpr.reconstructor(
             X_seed, y_seed, X_full, kernel, lengthscale, sparse, indpoints,
-            learning_rate, iterations, self.use_gpu, self.verbose, seed)
+            learning_rate, gp_iterations, self.use_gpu, self.verbose, seed)
 
         self.X_sparse = X_seed.copy()
         self.y_sparse = y_seed.copy()
