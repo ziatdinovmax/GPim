@@ -1,3 +1,4 @@
+[![PyPI version](https://badge.fury.io/py/gpim.svg)](https://badge.fury.io/py/gpim)
 [![Build Status](https://travis-ci.com/ziatdinovmax/atomai.svg?branch=master)](https://travis-ci.com/ziatdinovmax/atomai)
 [![Documentation Status](https://readthedocs.org/projects/gpim/badge/?version=latest)](https://gpim.readthedocs.io/en/latest/?badge=latest)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/07ee1606a88b48d1bc46453f3ae1b1c8)](https://app.codacy.com/manual/ziatdinovmax/GPim?utm_source=github.com&utm_medium=referral&utm_content=ziatdinovmax/GPim&utm_campaign=Badge_Grade_Dashboard)
@@ -31,7 +32,7 @@ GP for 4D hyperspectral data: https://arxiv.org/abs/2002.03591
 To use it, first run:
 
 ```bash
-pip install git+https://github.com/ziatdinovmax/GPim.git
+pip install gpim
 ```
 
 
@@ -71,19 +72,9 @@ gpim.utils.plot_kernel_hyperparams(hyperparams)
 ### Running GPim notebooks in the cloud
 
 1) Executable Google Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/examples/notebooks/GP_2D3D_images.ipynb) with the example of applying GP to sparse spiral 2D scans in piezoresponse force microscopy (PFM) and hyperspectral 3D data in Band Excitation PFM.
-2) Executable Google Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/examples/notebooks/GP_TD_cKPFM.ipynb) with the example of applying GP to 4D spectroscopic dataset for smoothing and resolution enhancement in contact Kelvin Probe Force Microscopy (cKPFM)
-3) Simple example of performing GP-based exploration-exploitation on a toy dataset- TBA 
+2) Executable Google Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/examples/notebooks/GP_TD_cKPFM.ipynb) with the example of applying GP to 4D spectroscopic dataset for smoothing and resolution enhancement in contact Kelvin Probe Force Microscopy (cKPFM).
+3) Executable Google Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/examples/notebooks/GP_based_exploration_exploitation.ipynb) with a simple example of performing GP-based exploration-exploitation on a toy dataset.
 
 ## Requirements
 
 It is strongly recommended to run the codes with a GPU hardware accelerator (such as NVIDIA's P100 or V100 GPU). If you don't have a GPU on your local machine, you may rent a cloud GPU from [Google Cloud AI Platform](https://cloud.google.com/deep-learning-vm/). Running the [example notebooks](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/examples/notebooks/Quickstart_GPim.ipynb) one time from top to bottom will cost about 1 USD with a standard deep learning VM instance (one P100 GPU and 15 GB of RAM).
-
-## TODO
-
-1) Add more test modules
-
-2) Add more utility functions for 4D datasets
-
-3) Add option to run GP on multiple GPUs
-
-4) Add GP for image registration
