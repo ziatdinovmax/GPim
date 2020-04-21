@@ -16,6 +16,7 @@ import torch
 from torch.distributions import transform_to, constraints
 import pyro
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 from mpl_toolkits.mplot3d import Axes3D
 
 
@@ -1036,4 +1037,28 @@ def plot_inducing_points_3d(hyperparams, **kwargs):
     plt.gca().set_visible(False)
     clrbar_ = plt.colorbar(img, ax=ax2, orientation='vertical')
     clrbar_.set_label('SVI iterations', fontsize=14, labelpad=10)
+    plt.show()
+
+
+def plot_query_points(inds_all, **kwargs):
+    """
+    Plots the exploration path (all the query points)
+    in GP-based Bayesian optimization. Currently supports only 2D data.
+
+    Args:
+        inds_all (list): list of indices
+        **cmap (str): colormap
+    """
+    cmap = kwargs.get("cmap", "cool")
+    inds_all = np.array(inds_all) # transform list to ndarray for plotting
+    cvals = np.arange(len(inds_all))
+    clrbar = np.linspace(0, len(inds_all)).reshape(-1, 1)
+    fig, ax1 = plt.subplots(1, 1, figsize=(6, 6))
+    ax1.scatter(inds_all[:, 1], inds_all[:, 0], c=cvals, cmap=cmap)
+    ax1.plot(inds_all[:, 1], inds_all[:, 0])
+    ax2 = fig.add_axes([.78, .1, .2, .8])
+    img = plt.imshow(clrbar, cmap)
+    plt.gca().set_visible(False)
+    clrbar_ = plt.colorbar(img, ax=ax2, orientation='vertical')
+    clrbar_.set_label('Exploration steps', fontsize=14, labelpad=10)
     plt.show()

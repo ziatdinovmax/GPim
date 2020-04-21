@@ -324,7 +324,7 @@ class boptimizer:
         """
 
         def dist(idx):
-            idx_prev = self.indices_all[:self.points_mem]
+            idx_prev = self.indices_all[-self.points_mem:]
             # Calculate distances between current point and previous n points
             d_all = [np.linalg.norm(np.array(idx) - np.array(i)) for i in idx_prev]
             # Calculate weighting coefficient for each distance
