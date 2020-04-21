@@ -1,9 +1,9 @@
-[![PyPI version](https://badge.fury.io/py/gpim.svg)](https://badge.fury.io/py/gpim)
-[![Downloads](https://pepy.tech/badge/gpim/month)](https://pepy.tech/project/gpim/month)
 [![Build Status](https://travis-ci.com/ziatdinovmax/atomai.svg?branch=master)](https://travis-ci.com/ziatdinovmax/atomai)
 [![Documentation Status](https://readthedocs.org/projects/gpim/badge/?version=latest)](https://gpim.readthedocs.io/en/latest/?badge=latest)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/07ee1606a88b48d1bc46453f3ae1b1c8)](https://app.codacy.com/manual/ziatdinovmax/GPim?utm_source=github.com&utm_medium=referral&utm_content=ziatdinovmax/GPim&utm_campaign=Badge_Grade_Dashboard)
 
+[![PyPI version](https://badge.fury.io/py/gpim.svg)](https://badge.fury.io/py/gpim)
+[![Downloads](https://pepy.tech/badge/gpim/month)](https://pepy.tech/project/gpim/month)
 
 [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/examples/notebooks/Quickstart_GPim.ipynb)
 [![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/ziatdinovmax/GPim)
