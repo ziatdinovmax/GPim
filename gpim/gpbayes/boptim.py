@@ -224,7 +224,6 @@ class boptimizer:
         """
         Calculates next query point(s)
         """
-        indices_list, vals_list = [], []
         if self.verbose:
             print("Computing acquisition function...")
         if self.acquisition_function == 'cb':
@@ -246,13 +245,18 @@ class boptimizer:
             raise NotImplementedError(
                 "Choose between 'cb', 'ei', and 'poi' acquisition functions or define your own")
         self.gp_predictions.append(pred)
-        if self.mask is not None:
+        if self.mask is None:
+            indices_list = np.unravel_index(np.argsort(acq.ravel()), acq.shape)
+            vals_list = acq[indices_list][::-1][:self.batch_size]
+            indices_list = np.dstack(indices_list)[0][::-1][:self.batch_size]
+        else:
             acq = self.mask*acq
-        for i in range(self.batch_size):
-            amax_idx = [i[0] for i in np.where(acq == np.nanmax(acq))]
-            indices_list.append(amax_idx)
-            vals_list.append(np.nanmax(acq))
-            acq[tuple(amax_idx)] = np.nanmin(acq) - 1
+            indices_list, vals_list = [], []
+            for i in range(self.batch_size):
+                amax_idx = [i[0] for i in np.where(acq == np.nanmax(acq))]
+                indices_list.append(amax_idx)
+                vals_list.append(np.nanmax(acq))
+                acq[tuple(amax_idx)] = np.nanmin(acq) - 1
         if not self.batch_update:
             return vals_list, indices_list
         if self.dscale is None:
