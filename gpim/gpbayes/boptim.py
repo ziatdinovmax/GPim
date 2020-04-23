@@ -247,16 +247,17 @@ class boptimizer:
         self.gp_predictions.append(pred)
         if self.mask is None:
             indices_list = np.unravel_index(np.argsort(acq.ravel()), acq.shape)
-            vals_list = acq[indices_list][::-1][:self.batch_size]
-            indices_list = np.dstack(indices_list)[0][::-1][:self.batch_size]
+            vals_list = acq[indices_list][::-1][:self.batch_size].tolist()
+            indices_list = np.dstack(indices_list)[0][::-1][:self.batch_size].tolist()
         else:
             acq = self.mask*acq
-            indices_list, vals_list = [], []
-            for i in range(self.batch_size):
-                amax_idx = [i[0] for i in np.where(acq == np.nanmax(acq))]
-                indices_list.append(amax_idx)
-                vals_list.append(np.nanmax(acq))
-                acq[tuple(amax_idx)] = np.nanmin(acq) - 1
+            indices_list = np.unravel_index(np.argsort(acq.ravel()), acq.shape)
+            vals_list = acq[indices_list]
+            vals_list = vals_list[~np.isnan(vals_list)][::-1]
+            indices_list = np.dstack(indices_list)[0]
+            indices_list = indices_list[:len(vals_list)][::-1]
+            vals_list = vals_list[:self.batch_size].tolist()
+            indices_list = indices_list[:self.batch_size].tolist()
         if not self.batch_update:
             return vals_list, indices_list
         if self.dscale is None:
