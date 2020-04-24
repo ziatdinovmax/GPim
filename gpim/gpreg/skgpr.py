@@ -327,6 +327,7 @@ class skreconstructor:
 class skgprmodel(gpytorch.models.ExactGP):
     """
     GP regression model with structured kernel interpolation
+    
     Args:
         X (ndarray):
             Grid indices with dimension :math:`n \\times c`,

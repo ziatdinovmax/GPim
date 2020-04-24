@@ -164,6 +164,7 @@ class reconstructor:
     def train(self, **kwargs):
         """
         Training sparse GP regression model
+
         Args:
             **learning_rate (float): learning rate
             **iterations (int): number of SVI training iteratons
@@ -212,6 +213,7 @@ class reconstructor:
     def predict(self, Xtest=None, **kwargs):
         """
         Uses trained GP regression model to make predictions
+
         Args:
             Xtest (ndarray):
                 "Test" points (for prediction with a trained GP model)
@@ -248,7 +250,8 @@ class reconstructor:
 
     def run(self, **kwargs):
         """
-        Train the initialized model and calculate predictive mean and variance
+        Trains the initialized model and calculate predictive mean and variance
+
         Args:
             **learning_rate (float):
                 learning rate for GP regression model training
