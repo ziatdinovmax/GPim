@@ -21,7 +21,7 @@ GP for 3D hyperspectral data: https://arxiv.org/abs/1911.11348
 
 GP for 4D hyperspectral data: https://arxiv.org/abs/2002.03591
 
-GP and GP-based Bayesian optimization for Ising model: https://arxiv.org/abs/2004.04832
+GP for Ising model: https://arxiv.org/abs/2004.04832
 
 *The intended audience are domain scientists (for example, microscopists) with a basic knowledge of python.*
  
