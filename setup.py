@@ -27,8 +27,8 @@ if __name__ == "__main__":
             'numpy>=1.16.5',
             'matplotlib>=3.1.1',
             'torch>=1.3.1',
-            'pyro-ppl>=0.4.1,<1.1.1',
-            'gpytorch>=0.3.6',
+            'pyro-ppl>=0.4.1',
+            'gpytorch>=0.3.6,<1.1.1',
             'scikit-image>=0.16.2'
         ],
         classifiers=['Programming Language :: Python',
