@@ -31,19 +31,22 @@ class boptimizer:
 
     Args:
         X_seed (ndarray):
-            Seeded sparse grid indices with dimensions :math:`c \\times N \\times M`
-            or :math:`c \\times N \\times M \\times L`
+            Initial seed of (sparse) grid indices with dimensions
+            :math:`c \\times N \\times M` or :math:`c \\times N \\times M \\times L`
             where *c* is equal to the number of coordinates
-            (for example, for *xyz* coordinates, *c* = 3)
+            (for example, for *xyz* coordinates, *c* = 3). Missing coordinates are NaNs.
+            Can be potentially larger than 3D but this has not beed tested yet.
         y_seed (ndarray):
-            Seeded sparse "observations" (data points) with dimensions
+            Initial seed with sparse "observations" with dimensions
             :math:`N \\times M` or :math:`N \\times M \\times L`.
             Typically, for 2D image *N* and *M* are image height and width,
             whereas for 3D hyperspectral data *N* and *M* are spatial dimensions
             and *L* is a spectorcopic dimension (e.g. voltage or wavelength).
+            Can be potentially larger than 3D but this has not beed tested yet.
         X_full (ndarray):
             Full grid indices (for prediction with a trained GP model)
-            with dimensions :math:`N \\times M` or :math:`N \\times M \\times L`
+            with dimensions :math:`N \\times M` or :math:`N \\times M \\times L`.
+            Can be potentially larger than 3D but this has not beed tested yet.
         target_function (python function):
             Target (or objective) function. Takes a list of indices and
             returns a function value as a float.
@@ -55,32 +58,37 @@ class boptimizer:
             acquisition function values with GP prediction (mean + sd)
         exploration_steps (int):
             Number of exploration-exploitation steps
-            (the expltation-exploration trade-off is
+            (the exploitation-exploration trade-off is
             determined by the acquisition function)
         batch_size (int):
                 Number of query points in one batch.
-                Returns a single next query point.
-        batch_update:
+                Returns a single query point when
+                batch_update parameter is set to False (default)
+        batch_update (bool):
             Filters the query points based on the kernel lengthscale.
             Returns a batch of points when set to True.
             The number of points in the batch may be different from
             batch_size as points are filtered based on the lengthscale.
+            Defaults to False.
         kernel (str):
-            Kernel type ('RBF', 'Matern52', 'RationalQuadratic')
-        lengthscale (list of int or list of two lists with int):
+            Kernel type ('RBF', 'Matern52', 'RationalQuadratic').
+            Defaults to 'RBF'.
+        lengthscale (list of int or list of 2 lists with int):
             Determines lower (1st value or 1st list) and upper (2nd value or 2nd list)
             bounds for kernel lengthscales. For list with two integers,
             the kernel will have only one lenghtscale, even if the dataset
             is multi-dimensional. For lists of two lists, the number of elements
             in each list must be equal to the dataset dimensionality.
         sparse (bool):
-            Uses sparse GP regression when set to True.
+            Uses inducing points-based sparse GP regression when set to True.
+            False by default.
         indpoints (int):
             Number of inducing points for SparseGPRegression.
             Defaults to total_number_of_points // 10.
         learning_rate (float):
             Learning rate for GP model training
-        iterations (int): Number of SVI training iteratons for GP model
+        iterations (int):
+            Number of SVI training iteratons for GP model
         seed (int):
             for reproducibility
         **alpha (float or int):
@@ -92,36 +100,43 @@ class boptimizer:
         **xi (float):
             xi coefficient in 'expected improvement'
             and 'probability of improvement' acquisition functions
+            (Default: 0.01)
         **use_gpu (bool):
             Uses GPU hardware accelerator when set to 'True'.
             Notice that for large datasets training model without GPU
-            is extremely slow.
+            is extremely slow. At the same time, for small and (very) sparse data
+            there may be no much benefit.
         **mask (ndarray):
             Mask of ones and NaNs (NaNs are values that are not counted when
             searching for acquisition function maximum).
         **dscale (float):
             Distance parameter used in boptimizer.checkvalues or in
             boptimizer.update_points, For boptimizer.checkvalues,
-            it is used in conjuction with 'alpha' and 'points_memory'
+            it is used in conjuction with 'gamma' and 'memory'
             parameters to select the next query point using the information
-            about the previous points. Defaults to 0. For boptimizer.update_points,
-            it is used to return a batch of points which are no closer
+            about the location of previous points. It can be understood as a
+            short-term memory, where the point at step :math:`s` is chosen no closer
+            than :math:`d` to the point selected at step :math:`s-1`, :math:`\\gamma d`
+            to the point selected at step :math:`s-2`, :math:`\\gamma^2 d`
+            at step :math:`s-3`, and so on. Defaults to 0. For boptimizer.update_points,
+            it is used to return a batch of points for a given step, which are no closer
             to each other than dscale value. Defauts to kernel average lenghtscale
-            at a given step.
-        **alpha (float):
-            alpha coefficient, value between 0 and 1.
-            Used in boptimizer.checkvalues together with 'dscale' parameter
-            to determine how close the next query point can be to the previous points.
-        **points_memory (int):
-            Number of previous points to remember when using 'dscale' criteria
+            at this step.
+        **gamma (float):
+            gamma coefficient, value between 0 and 1.
+            Used in boptimizer.checkvalues together with a 'dscale' parameter
+            to determine how close the next query point can be to
+            the previously selected points.
+        **memory (int):
+            Number of previously selected points to account for when using 'dscale'.
         **exit_strategy (0 or 1):
             Exit strategy for boptimizer.checkvalues when none
             of the points satisfies the imposed selection criteria.
-            0 means that a random value will be chosen, while 1
+            1 means that a random value will be chosen, while 0
             means that the last point in the list will be chosen
             (the length of the list is defined by 'batch_size' parameter)
         **extent(list of lists):
-            Define multi-dimensional data bounds. For example, for 2D data,
+            Define bounds for multi-dimensional data. For example, for 2D data,
             the extent parameter is [[xmin, xmax], [ymin, ymax]]
         **verbose (int):
             Level of verbosity (0, 1, or 2)
@@ -145,7 +160,6 @@ class boptimizer:
         """
         Initiates Bayesian optimizer parameters
         """
-
         self.verbose = kwargs.get("verbose", 1)
         self.use_gpu = kwargs.get("use_gpu", False)
         learning_rate = kwargs.get("learning_rate", 5e-2)
@@ -178,8 +192,8 @@ class boptimizer:
         self.alpha, self.beta = kwargs.get("alpha", 0), kwargs.get("beta", 1)
         self.xi = kwargs.get("xi", 0.01)
         self.dscale = kwargs.get("dscale", None)
-        self.alpha = kwargs.get("alpha", 0.8)
-        self.points_mem = kwargs.get("points_memory", 10)
+        self.gamma = kwargs.get("gamma", 0.8)
+        self.points_mem = kwargs.get("memory", 10)
         self.exit_strategy = kwargs.get("exit_strategy", 0)
         self.mask = kwargs.get("mask", None)
         self.indices_all, self.vals_all = [], []
@@ -333,7 +347,7 @@ class boptimizer:
             # Calculate distances between current point and previous n points
             d_all = [np.linalg.norm(np.array(idx) - np.array(i)) for i in idx_prev]
             # Calculate weighting coefficient for each distance
-            dscale_all = [dscale_*self.alpha**i for i in range(len(idx_prev))]
+            dscale_all = [dscale_*self.gamma*i for i in range(len(idx_prev))]
             # Check if each distance satisfies the imposed criteria
             bool_ = 0 in [d > l for (d, l) in zip(d_all[::-1], dscale_all)]
             return bool_
