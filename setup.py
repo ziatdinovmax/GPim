@@ -1,5 +1,5 @@
 __author__ = "Maxim Ziatdinov"
-__copyright__ = "Copyright Maxim Ziatdinov (2019)"
+__copyright__ = "Copyright Maxim Ziatdinov (2020)"
 __version__ = "0.2.4"
 __maintainer__ = "Maxim Ziatdinov"
 __email__ = "maxim.ziatdinov@ai4microcopy.com"
