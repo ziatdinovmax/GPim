@@ -1,9 +1,10 @@
 import os
 import numpy as np
 import pytest
-from numpy.testing import assert_
+from numpy.testing import assert_allclose
 from gpim.gpbayes.boptim import boptimizer
 from gpim import gprutils
+np.random.seed(0)
 
 test_img_ei = os.path.join(
     os.path.dirname(__file__), 'test_data/test_ei.npy')
@@ -49,4 +50,4 @@ def test_boptim(acqf, result):
         exploration_steps=20,
         use_gpu=False, verbose=1)
     boptim.run()
-    assert_(boptim.target_func_vals[-1], result)
+    assert_allclose(boptim.target_func_vals[-1], result)
