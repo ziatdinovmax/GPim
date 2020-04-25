@@ -44,10 +44,11 @@ def test_boptim(acqf, result):
     Z_sparse = initial_seed()
     X_full = gprutils.get_full_grid(Z_sparse)
     X_sparse = gprutils.get_sparse_grid(Z_sparse)
+    expected_result = np.load(result)
     boptim = boptimizer(
         X_sparse, Z_sparse, X_full,
         trial_func, acquisition_function=acqf,
         exploration_steps=20,
         use_gpu=False, verbose=1)
     boptim.run()
-    assert_allclose(boptim.target_func_vals[-1], result)
+    assert_allclose(boptim.target_func_vals[-1], expected_result)
