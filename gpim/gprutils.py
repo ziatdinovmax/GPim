@@ -1050,12 +1050,14 @@ def plot_query_points(inds_all, **kwargs):
         **cmap (str): colormap
     """
     cmap = kwargs.get("cmap", "cool")
-    inds_all = np.array(inds_all) # transform list to ndarray for plotting
+    plot_lines = kwargs.get("plot_lines", False)
+    inds_all = np.array(inds_all)  # transform list to ndarray for plotting
     cvals = np.arange(len(inds_all))
     clrbar = np.linspace(0, len(inds_all)).reshape(-1, 1)
     fig, ax1 = plt.subplots(1, 1, figsize=(6, 6))
     ax1.scatter(inds_all[:, 1], inds_all[:, 0], c=cvals, cmap=cmap)
-    ax1.plot(inds_all[:, 1], inds_all[:, 0])
+    if plot_lines:
+        ax1.plot(inds_all[:, 1], inds_all[:, 0])
     ax2 = fig.add_axes([.78, .1, .2, .8])
     img = plt.imshow(clrbar, cmap)
     plt.gca().set_visible(False)
