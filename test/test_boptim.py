@@ -37,9 +37,9 @@ def initial_seed():
 
 @pytest.mark.parametrize(
     "acqf, result",
-    [("ei", "test_img_ei"),
-     ("poi", "test_img_poi"),
-     ("cb", "test_img_cb")])
+    [("ei", test_img_ei),
+     ("poi", test_img_poi),
+     ("cb", test_img_cb)])
 def test_boptim(acqf, result):
     Z_sparse = initial_seed()
     X_full = gprutils.get_full_grid(Z_sparse)
