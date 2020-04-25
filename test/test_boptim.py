@@ -49,4 +49,4 @@ def test_boptim(acqf, result):
         exploration_steps=20,
         use_gpu=False, verbose=1)
     boptim.run()
-    assert_(boptim.boptim.target_func_vals[-1], result)
+    assert_(boptim.target_func_vals[-1], result)
