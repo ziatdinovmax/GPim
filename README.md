@@ -20,7 +20,7 @@ GP for 4D hyperspectral data: https://arxiv.org/abs/2002.03591
 
 GP for Ising model: https://arxiv.org/abs/2004.04832
 
-*The intended audience are domain scientists (for example, microscopists) with a basic knowledge of python.*
+*The intended audience are domain scientists (for example, microscopists) with a basic knowledge of how to work with numpy arrays in Python.*
  
 <p align="center">
   <img src="misc/GPim_illustration_v2.png" width="75%" title="GPim">
