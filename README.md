@@ -39,7 +39,7 @@ pip install gpim
 
 ### General usage
 
-Below is a simple example of applying GPim to reconstructing a sparse 2D image. It can be similarly applied to 3D and 4D hyperspectral data. The missing data points in sparse data must be represented as [NaNs](https://docs.scipy.org/doc/numpy/reference/constants.html?highlight=numpy%20nan#numpy.nan). In the absense of missing observation GPim can be used for image and spectroscopic data cleaning/smoothing in all the dimensions simultaneously, as well as for the resolution enhancement. Finally, when performing measurements, one can use the information about uncertainty in GP reconstruction to select the next measurement point (more details in the notebooks referenced below).
+Below is a simple example of applying GPim to reconstructing a sparse 2D image. It can be similarly applied to 3D and 4D hyperspectral data. The missing data points in sparse data must be represented as [NaNs](https://docs.scipy.org/doc/numpy/reference/constants.html?highlight=numpy%20nan#numpy.nan). In the absense of missing observation GPim can be used for image and spectroscopic data cleaning/smoothing in all the dimensions simultaneously, as well as for the resolution enhancement.
 
 ```python
 import gpim
@@ -66,6 +66,42 @@ mean, sd, hyperparams = gpim.reconstructor(
 gpim.utils.plot_reconstructed_data2d(R, mean, cmap='jet')
 # Plot evolution of kernel hyperparameters during training
 gpim.utils.plot_kernel_hyperparams(hyperparams)
+```
+
+In addition, when performing measurements (real or simulated), one can use the information about the expected function value and uncertainty in GP reconstruction to select the next measurement point. This is usually referred to as exploration-exploitation approach in the context of Bayesian optimization.
+
+```python
+import gpim
+import numpy as np
+np.random.seed(42)
+
+# Create a dummy 2D function
+def trial_func(idx):
+    """Takes a list of indices as input and returns function value at these indices"""
+    return np.exp(-4*np.log(2) * ((idx[0]-5)**2 + (idx[1]-10)**2) / 9) 
+
+# Create an empty observation matrix
+grid_size = 25
+Z_sparse = np.ones((grid_size, grid_size)) * np.nan
+# Seed it with several random observations
+idx = np.random.randint(0, grid_size, size=(4, 2))
+for i in idx:
+    Z_sparse[tuple(i)] = trial_func(i) 
+
+# Get full and sparse grid indices for GP
+X_full = gpim.utils.get_full_grid(Z_sparse)
+X_sparse= gpim.utils.get_sparse_grid(Z_sparse)
+# Initialize Bayesian optimizer with an 'expected improvement' acquisition function
+boptim = gpim.boptimizer(
+    X_sparse, Z_sparse, X_full, 
+    trial_func, acquisition_function='ei',
+    exploration_steps=30,
+    use_gpu=False, verbose=1)
+# Run Bayesian optimization
+boptim.run()
+
+# Plot exploration history
+gpim.utils.plot_query_points(boptim.indices_all, plot_lines=True)
 ```
 
 ### Running GPim notebooks in the cloud
