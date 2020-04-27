@@ -28,7 +28,7 @@ GP for Ising model: https://arxiv.org/abs/2004.04832
 
 ## Installation
 
-To use it, first run:
+First install [PyTorch](https://pytorch.org/). Then install GPim using
 
 ```bash
 pip install gpim
