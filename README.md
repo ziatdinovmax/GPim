@@ -37,7 +37,7 @@ pip install gpim
 
 ## How to use
 
-### General usage
+### GP reconstruction
 
 Below is a simple example of applying GPim to reconstructing a sparse 2D image. It can be similarly applied to 3D and 4D hyperspectral data. The missing data points in sparse data must be represented as [NaNs](https://docs.scipy.org/doc/numpy/reference/constants.html?highlight=numpy%20nan#numpy.nan). In the absense of missing observation GPim can be used for image and spectroscopic data cleaning/smoothing in all the dimensions simultaneously, as well as for the resolution enhancement.
 
@@ -68,6 +68,7 @@ gpim.utils.plot_reconstructed_data2d(R, mean, cmap='jet')
 gpim.utils.plot_kernel_hyperparams(hyperparams)
 ```
 
+### GP-based Bayesian optimization
 In addition, when performing measurements (real or simulated), one can use the information about the expected function value and uncertainty in GP reconstruction to select the next measurement point. This is usually referred to as exploration-exploitation approach in the context of Bayesian optimization. A simple example with a "dummy" function is shown below.
 
 ```python
@@ -104,7 +105,7 @@ boptim.run()
 gpim.utils.plot_query_points(boptim.indices_all, plot_lines=True)
 ```
 
-### Running GPim notebooks in the cloud
+## Running GPim notebooks in the cloud
 
 1) Executable Google Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/examples/notebooks/GP_2D3D_images.ipynb) with the example of applying GP to sparse spiral 2D scans in piezoresponse force microscopy (PFM) and hyperspectral 3D data in Band Excitation PFM.
 2) Executable Google Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/examples/notebooks/GP_TD_cKPFM.ipynb) with the example of applying GP to 4D spectroscopic dataset for smoothing and resolution enhancement in contact Kelvin Probe Force Microscopy (cKPFM).
