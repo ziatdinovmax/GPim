@@ -69,7 +69,7 @@ gpim.utils.plot_kernel_hyperparams(hyperparams)
 ```
 
 ### GP-based Bayesian optimization
-In addition, when performing measurements (real or simulated), one can use the information about the expected function value and uncertainty in GP reconstruction to select the next measurement point. This is usually referred to as exploration-exploitation approach in the context of Bayesian optimization. A simple example with a "dummy" function is shown below.
+When performing measurements (real or simulated), one can use the information about the expected function value and uncertainty in GP reconstruction to select the next measurement point. This is usually referred to as exploration-exploitation approach in the context of Bayesian optimization. A simple example with a "dummy" function is shown below.
 
 ```python
 import gpim
