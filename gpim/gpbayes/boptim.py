@@ -347,7 +347,7 @@ class boptimizer:
             # Calculate distances between current point and previous n points
             d_all = [np.linalg.norm(np.array(idx) - np.array(i)) for i in idx_prev]
             # Calculate weighting coefficient for each distance
-            dscale_all = [dscale_*self.gamma*i for i in range(len(idx_prev))]
+            dscale_all = [dscale_*self.gamma**i for i in range(len(idx_prev))]
             # Check if each distance satisfies the imposed criteria
             bool_ = 0 in [d > l for (d, l) in zip(d_all[::-1], dscale_all)]
             return bool_
