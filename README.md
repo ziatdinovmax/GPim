@@ -80,7 +80,7 @@ np.random.seed(42)
 # Create a dummy 2D function
 def trial_func(idx):
     """Takes a list of indices as input and returns function value at these indices"""
-    return np.exp(-4*np.log(2) * ((idx[0]-5)**2 + (idx[1]-10)**2) / 9) 
+    return np.exp(-4*np.log(2) * ((idx[0]-5)**2 + (idx[1]-10)**2) / 4.5**2) 
 
 # Create an empty observation matrix
 grid_size = 25
