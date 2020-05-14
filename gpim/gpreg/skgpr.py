@@ -348,6 +348,7 @@ class skreconstructor:
 class skgprmodel(gpytorch.models.ExactGP):
     """
     GP regression model with structured kernel interpolation
+    or spectral mixture kernel.
     
     Args:
         X (ndarray):
@@ -358,7 +359,7 @@ class skgprmodel(gpytorch.models.ExactGP):
         y (ndarray):
             Observations (data points) with dimension n
         kernel (gpytorch kernel object):
-            'RBF' or 'Matern52' kernels
+            Kernel
         likelihood (gpytorch likelihood object):
             The Gaussian likelihood
         input_dim (int):
