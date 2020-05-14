@@ -1,10 +1,11 @@
 '''
 skgpr.py
 ======
-Gaussian process regression model with a structured kernel interpolation.
-Serves as a high-level wrapper for GPyTorch's (https://gpytorch.ai)
-Gaussian processes module with a structred kernel interpolation method
-for easy work with scientific image (2D) and hyperspectral (3D, 4D) data.
+Gaussian process regression model with a structured kernel interpolation
+or a spectral mixture kernel. Serves as a high-level wrapper
+for GPyTorch's (https://gpytorch.ai) Gaussian process modules with
+structred kernel interpolation and spectral mixture kernel methods.
+
 Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
 '''
 
@@ -20,7 +21,7 @@ import warnings
 class skreconstructor:
     """
     GP regression model with structured kernel interpolation
-    for 2D/3D/4D image data reconstruction
+    or spectral mixture kernel for 2D/3D/4D image data reconstruction
 
     Args:
         X (ndarray):
@@ -47,7 +48,7 @@ class skreconstructor:
             Determines lower (1st list) and upper (2nd list) bounds
             for kernel lengthscales. The number of elements in each list
             is equal to the dataset dimensionality.
-        sparse (bool):
+        ski (bool):
             Perform structured kernel interpolation GP. Set to True by default.
         iterations (int):
             Number of training steps
@@ -79,7 +80,7 @@ class skreconstructor:
                  Xtest=None,
                  kernel='RBF',
                  lengthscale=None,
-                 sparse=True,
+                 ski=True,
                  learning_rate=.1,
                  iterations=50,
                  use_gpu=1,
@@ -113,7 +114,9 @@ class skreconstructor:
         if Xtest is not None:
             Xtest = gprutils.prepare_test_data(Xtest, precision=self.precision)
         self.X, self.y, self.Xtest = X, y, Xtest
-        self.do_ski = sparse
+        self.do_ski = ski
+        if kernel == "Spectral":
+            self.do_ski = False
         self.toeplitz = gpytorch.settings.use_toeplitz(True)
         maxroot = kwargs.get("maxroot", 100)
         self.maxroot = gpytorch.settings.max_root_decomposition_size(maxroot)
@@ -175,31 +178,45 @@ class skreconstructor:
             loss = -mll(output, self.y)
             loss.backward()
             optimizer.step()
-            if not self.do_ski:
-                self.lscales.append(
-                    self.model.covar_module.base_kernel.lengthscale.tolist()[0]
-                )
-            else:
+            if self.do_ski:
                 self.lscales.append(
                     self.model.covar_module.base_kernel.base_kernel.lengthscale.tolist()[0]
                 )
+            else:
+                if not hasattr(self.model.covar_module, "num_mixtures"):
+                    self.lscales.append(
+                        self.model.covar_module.base_kernel.lengthscale.tolist()[0]
+                    )
+                else:
+                    pass
             self.noise_all.append(
                 self.model.likelihood.noise_covar.noise.item())
             if self.verbose == 2 and (i % 10 == 0 or i == self.iterations - 1):
-                print('iter: {} ...'.format(i),
-                      'loss: {} ...'.format(np.around(loss.item(), 4)),
-                      'length: {} ...'.format(np.around(self.lscales[-1], 4)),
-                      'noise: {} ...'.format(np.around(self.noise_all[-1], 7)))
+                if not hasattr(self.model.covar_module, "num_mixtures"):
+                    template = 'iter: {} ... loss: {} ... length: {} ... noise: {} ...'
+                    print(template.format(
+                        i, np.around(loss.item(), 4),
+                        np.around(self.lscales[-1], 4),
+                        np.around(self.noise_all[-1], 7)))
+                else:
+                    template = 'iter: {} ... loss: {} ... noise: {} ...'
+                print(template.format(
+                    i, np.around(loss.item(), 4),
+                    np.around(self.noise_all[-1], 7)))
             if self.verbose and i == 10:
                 print('average time per iteration: {} s'.format(
                     np.round(time.time() - start_time, 2) / 10))
         if self.verbose:
             print('training completed in {} s'.format(
                 np.round(time.time() - start_time, 2)))
-            print('Final parameter values:\n',
-                'lengthscale: {}, noise: {}'.format(
-                    np.around(self.lscales[-1], 4),
-                    np.around(self.noise_all[-1], 7)))
+            if not hasattr(self.model.covar_module, "num_mixtures"):
+                print('Final parameter values:\n',
+                    'lengthscale: {}, noise: {}'.format(
+                        np.around(self.lscales[-1], 4),
+                        np.around(self.noise_all[-1], 7)))
+            else:
+                print('Final parameter values:\n',
+                'noise: {}'.format(np.around(self.noise_all[-1], 7)))
         return
 
     def predict(self, Xtest=None, **kwargs):
@@ -302,9 +319,9 @@ class skreconstructor:
             predictive mean and standard deviation (as flattened numpy arrays)
 
         """
-        if self.do_ski:
+        if self.do_ski or hasattr(self.model.covar_module, "num_components"):
             raise NotImplementedError(
-        "The Bayesian optimization routines are not available for structured kernel")
+        "The Bayesian optimization routines are not available for structured or spectral kernel")
         if kwargs.get("learning_rate") is not None:
             self.learning_rate = kwargs.get("learning_rate")
         if kwargs.get("iterations") is not None:
@@ -355,8 +372,12 @@ class skgprmodel(gpytorch.models.ExactGP):
         """
         super(skgprmodel, self).__init__(X, y, likelihood)
         self.mean_module = gpytorch.means.ConstantMean()
-        self.covar_module = gpytorch.kernels.ScaleKernel(kernel)
-        if do_ski:
+        if hasattr(kernel, "num_mixtures"):
+            self.covar_module = kernel
+            self.covar_module.initialize_from_data(X, y)
+        else:
+            self.covar_module = gpytorch.kernels.ScaleKernel(kernel)
+        if not hasattr(kernel, "num_mixtures") and do_ski:
             grid_size = gpytorch.utils.grid.choose_grid_size(
                 X, ratio=grid_points_ratio)
             self.covar_module = gpytorch.kernels.GridInterpolationKernel(
@@ -369,4 +390,3 @@ class skgprmodel(gpytorch.models.ExactGP):
         mean_x = self.mean_module(x)
         covar_x = self.covar_module(x)
         return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
-
