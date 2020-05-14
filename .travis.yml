@@ -9,6 +9,9 @@ os:
 
 cache: pip
 
+before_install:
+    - pip install --upgrade pip
+
 install:
     - python setup.py install
 
