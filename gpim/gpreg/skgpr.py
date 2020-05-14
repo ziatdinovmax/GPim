@@ -62,6 +62,8 @@ class skreconstructor:
             for reproducibility
         **grid_points_ratio (float):
             Ratio of inducing points to overall points
+        **n_mixtures (int):
+            number of mixtures for spectral mixture kernel
         **isotropic (bool):
             one kernel lengthscale in all dimensions
         **max_root (int):
@@ -129,9 +131,11 @@ class skreconstructor:
             torch.set_default_tensor_type(self.tensor_type)
         self.likelihood = gpytorch.likelihoods.GaussianLikelihood()
         isotropic = kwargs.get("isotropic")
+        n_mixtures = kwargs.get("n_mixtures")
         _kernel = gpytorch_kernels.get_kernel(
             kernel, input_dim, use_gpu, lengthscale=lengthscale,
-            isotropic=isotropic, precision=self.precision)
+            isotropic=isotropic, precision=self.precision,
+            n_mixtures=n_mixtures)
         grid_points_ratio = kwargs.get("grid_points_ratio", 1.)
         self.model = skgprmodel(self.X, self.y,
                                 _kernel, self.likelihood, input_dim,
