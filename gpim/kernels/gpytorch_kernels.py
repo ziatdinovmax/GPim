@@ -50,7 +50,7 @@ def get_kernel(kernel_type, input_dim, on_gpu=True, **kwargs):
     lscale = kwargs.get('lengthscale')
     isotropic = kwargs.get("isotropic")
     nmix = kwargs.get("n_mixtures")
-    if kernel_type == "Spectral" and nmix is None:
+    if nmix is None:
         nmix = 4
     if lscale is not None:
         lscale = gpytorch.constraints.Interval(torch.tensor(lscale[0]),
