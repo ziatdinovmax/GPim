@@ -29,7 +29,7 @@ if __name__ == "__main__":
             'torch>=1.3.1',
             'pyro-ppl>=0.4.1',
             'gpytorch>=0.3.6,<1.1.1',
-            'scikit-image>=0.16.2'
+            'scikit-image==0.16.2'
         ],
         classifiers=['Programming Language :: Python',
                      'Development Status :: 3 - Alpha',
