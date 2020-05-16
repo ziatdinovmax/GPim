@@ -146,11 +146,21 @@ class skreconstructor:
         self.num_batches = kwargs.get("num_batches", 1)
         self.learning_rate = learning_rate
 
-        self.lscales, self.noise_all = [], []
-        self.hyperparams = {
-            "lengthscale": self.lscales,
-            "noise": self.noise_all,
-        }
+        self.noise_all = []
+        if kernel == "Spectral":
+            self.scales, self.means, self.weights = [], [], []
+            self.hyperparams = {
+                "scales": self.scales,
+                "means": self.means,
+                "weights": self.means,
+                "noise": self.noise_all
+            }
+        else:
+            self.lscales = []
+            self.hyperparams = {
+                "lengthscale": self.lscales,
+                "noise": self.noise_all,
+            }
         self.verbose = verbose
 
     def train(self, **kwargs):
@@ -192,7 +202,13 @@ class skreconstructor:
                         self.model.covar_module.base_kernel.lengthscale.tolist()[0]
                     )
                 else:
-                    pass
+                    weights = self.model.covar_module.mixture_weights.detach()
+                    scales = 1 / torch.sqrt(
+                        self.model.covar_module.mixture_scales.detach())
+                    means = 1 / self.model.covar_module.mixture_means.detach()
+                    self.weights.append(weights.cpu().numpy().copy())
+                    self.scales.append(scales.cpu().numpy().copy())
+                    self.means.append(means.cpu().numpy().copy())
             self.noise_all.append(
                 self.model.likelihood.noise_covar.noise.item())
             if self.verbose == 2 and (i % 10 == 0 or i == self.iterations - 1):
@@ -204,9 +220,19 @@ class skreconstructor:
                         np.around(self.noise_all[-1], 7)))
                 else:
                     template = 'iter: {} ... loss: {} ... noise: {} ...'
-                print(template.format(
-                    i, np.around(loss.item(), 4),
-                    np.around(self.noise_all[-1], 7)))
+                    print(template.format(
+                        i, np.around(loss.item(), 4),
+                        np.around(self.noise_all[-1], 7)))
+                    sort_idx = torch.argsort(weights, descending=True)
+                    weights_sorted = weights[sort_idx].double()
+                    scales_sorted = scales[sort_idx]
+                    means_sorted = means[sort_idx]
+                    print("weight" + 10*" " +  "mean" + 10*" " + "scale")
+                    for w, m, s in zip(weights_sorted, means_sorted, scales_sorted):
+                        print("{}  {}  {}".format(
+                            w.cpu().numpy().round(4),
+                            m[0].cpu().numpy().round(4),
+                            s[0].cpu().numpy().round(4)))
             if self.verbose and i == 10:
                 print('average time per iteration: {} s'.format(
                     np.round(time.time() - start_time, 2) / 10))
@@ -260,7 +286,7 @@ class skreconstructor:
         self.model.eval()
         self.likelihood.eval()
         batch_range = len(self.Xtest) // self.num_batches
-        dtype_ = np.float32 if self.precision == 'single' else np.float64 
+        dtype_ = np.float32 if self.precision == 'single' else np.float64
         mean = np.zeros((self.Xtest.shape[0]), dtype_)
         sd = np.zeros((self.Xtest.shape[0]), dtype_)
         if self.verbose:
@@ -349,7 +375,7 @@ class skgprmodel(gpytorch.models.ExactGP):
     """
     GP regression model with structured kernel interpolation
     or spectral mixture kernel.
-    
+
     Args:
         X (ndarray):
             Grid indices with dimension :math:`n \\times c`,
