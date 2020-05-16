@@ -242,12 +242,17 @@ class skreconstructor:
                 np.round(time.time() - start_time, 2)))
             if not hasattr(self.model.covar_module, "num_mixtures"):
                 print('Final parameter values:\n',
-                    'lengthscale: {}, noise: {}'.format(
+                      'lengthscale: {}, noise: {}'.format(
                         np.around(self.lscales[-1], 4),
                         np.around(self.noise_all[-1], 7)))
             else:
                 print('Final parameter values:\n',
-                'noise: {}'.format(np.around(self.noise_all[-1], 7)))
+                      'noise: {}'.format(np.around(self.noise_all[-1], 7)))
+                for w, m, s in zip(self.weights[-1], self.means[-1], self.scales[-1]):
+                    print("{}  {}  {}".format(
+                        np.around(w.astype(np.float64), 5),
+                        np.around(m[0], 5),
+                        np.around(s[0], 5)))
         return
 
     def predict(self, Xtest=None, **kwargs):
@@ -287,7 +292,7 @@ class skreconstructor:
         self.model.eval()
         self.likelihood.eval()
         batch_range = len(self.Xtest) // self.num_batches
-        dtype_ = np.float32 if self.precision == 'single' else np.float64 
+        dtype_ = np.float32 if self.precision == 'single' else np.float64
         mean = np.zeros((self.Xtest.shape[0]), dtype_)
         sd = np.zeros((self.Xtest.shape[0]), dtype_)
         if self.verbose:
@@ -376,7 +381,7 @@ class skgprmodel(gpytorch.models.ExactGP):
     """
     GP regression model with structured kernel interpolation
     or spectral mixture kernel.
-    
+
     Args:
         X (ndarray):
             Grid indices with dimension :math:`n \\times c`,
