@@ -153,7 +153,8 @@ class skreconstructor:
                 "scales": self.scales,
                 "means": self.means,
                 "weights": self.weights,
-                "noise": self.noise_all
+                "noise": self.noise_all,
+                "maxdim": max(self.fulldims)
             }
         else:
             self.lscales = []
