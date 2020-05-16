@@ -667,7 +667,7 @@ def plot_mixture_hyperparams(hyperparams):
     ax1.set_ylim(0, maxdim)
     ax2.set_ylim(0, maxdim)
 
-    clrbar = np.linspace(1, len(m) + 1).reshape(-1, 1)
+    clrbar = np.linspace(1, len(m)).reshape(-1, 1)
     ax_ = fig.add_axes([.36, -.12, .3, .8])
     img = plt.imshow(clrbar, cmap='jet')
     plt.gca().set_visible(False)
