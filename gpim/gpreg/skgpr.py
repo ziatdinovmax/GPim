@@ -152,7 +152,7 @@ class skreconstructor:
             self.hyperparams = {
                 "scales": self.scales,
                 "means": self.means,
-                "weights": self.means,
+                "weights": self.weights,
                 "noise": self.noise_all
             }
         else:
@@ -286,7 +286,7 @@ class skreconstructor:
         self.model.eval()
         self.likelihood.eval()
         batch_range = len(self.Xtest) // self.num_batches
-        dtype_ = np.float32 if self.precision == 'single' else np.float64
+        dtype_ = np.float32 if self.precision == 'single' else np.float64 
         mean = np.zeros((self.Xtest.shape[0]), dtype_)
         sd = np.zeros((self.Xtest.shape[0]), dtype_)
         if self.verbose:
@@ -375,7 +375,7 @@ class skgprmodel(gpytorch.models.ExactGP):
     """
     GP regression model with structured kernel interpolation
     or spectral mixture kernel.
-
+    
     Args:
         X (ndarray):
             Grid indices with dimension :math:`n \\times c`,
