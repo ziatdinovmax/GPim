@@ -578,14 +578,17 @@ def open_edge_points(R, R_true, s=6):
 
 def plot_kernel_hyperparams(hyperparams):
     """
-    Plots evolution of kernel hyperparameters (lengthscale, variance, noise)
-    as a function of SVI steps
+    Plots evolution of kernel hyperparameters
+    as a function of training steps
 
     Args:
         hyperparams (dict):
             dictionary with kernel hyperparameters
-            (see gpr.reconstructor)
+            (see gpreg.gpr.reconstructor)
     """
+    if "weights" in hyperparams.keys():
+        plot_mixture_hyperparams(hyperparams)
+        return
     if 'variance' in hyperparams.keys():
         _, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(16, 4))
     else:
@@ -607,6 +610,69 @@ def plot_kernel_hyperparams(hyperparams):
         ax3.set_title('variance')
         ax3.set_xlabel('SVI iteration')
         ax3.set_ylabel('variance (px)')
+    plt.show()
+
+
+def plot_mixture_hyperparams(hyperparams):
+    """
+    Plots evolution of spectral mixture kernel hyperparameters
+    as a function of training iterations
+
+    Args:
+        hyperparams (dict):
+            dictionary with kernel hyperparameters
+            (see gpreg.skgpr.skreconstructor)
+    """
+    means = hyperparams["means"]
+    scales = hyperparams["scales"]
+    weights = hyperparams["weights"]
+    noise = hyperparams["noise"]
+    maxdim = hyperparams["maxdim"]
+
+    if scales[0].shape[-1] != 2:
+        raise NotImplementedError(
+            "Currently supports plotting only for 2D cases"
+        )
+
+    print("Mixture (final) weights:")
+    for i, w in enumerate(weights[-1]):
+        print("Component {}: w = {}".format(i, w.astype(np.float64).round(5)))
+
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(21, 6))
+    for i, m in enumerate(means):
+        label1 = "x coordinate" if i == len(means) - 1 else None
+        label2 = "y coordinate" if i == len(means) - 1 else None
+        ax1.scatter(np.tile(i, len(m)), m[:, 0, 0], s=18, c=np.arange(len(m)), cmap='jet', label=label1)
+        ax1.scatter(np.tile(i, len(m)), m[:, 0, 1], s=18, marker='x', c=np.arange(len(m)), cmap='jet', label=label2)
+    ax1.set_xlabel("Iteration", fontsize=14)
+    ax1.set_ylabel("Mixture mean/period (px)", fontsize=14)
+    ax1.set_title("Mixtures mean (period)", fontsize=14)
+    ax1.legend()
+
+    for i, s in enumerate(scales):
+        label1 = "x coordinate" if i == len(scales) - 1 else None
+        label2 = "y coordinate" if i == len(scales) - 1 else None
+        ax2.scatter(np.tile(i, len(s)), s[:, 0, 0], s=18, c=np.arange(len(s)), cmap='jet', label=label1)
+        ax2.scatter(np.tile(i, len(s)), s[:, 0, 1], s=18, marker='x', c=np.arange(len(s)), cmap='jet', label=label2)
+    ax2.set_xlabel("Iteration", fontsize=14)
+    ax2.set_ylabel("Mixture scale (px)", fontsize=14)
+    ax2.set_title("Mixtures scales", fontsize=14)
+    ax2.legend()
+
+    ax3.plot(noise, linewidth=3)
+    ax3.set_ylabel("noise (px)", fontsize=14)
+    ax3.set_xlabel("Iteration", fontsize=14)
+    ax3.set_title("noise", fontsize=14)
+
+    ax1.set_ylim(0, maxdim)
+    ax2.set_ylim(0, maxdim)
+
+    clrbar = np.linspace(1, len(m)).reshape(-1, 1)
+    ax_ = fig.add_axes([.36, -.12, .3, .8])
+    img = plt.imshow(clrbar, cmap='jet')
+    plt.gca().set_visible(False)
+    clrbar = plt.colorbar(img, ax=ax_, orientation='horizontal')
+    clrbar.set_label('Mixture component', fontsize=14, labelpad=10)
     plt.show()
 
 
