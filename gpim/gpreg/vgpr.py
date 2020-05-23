@@ -218,6 +218,16 @@ class vreconstructor:
             (for large datasets, you may not have enough GPU memory
             to process the entire dataset at once)
         """
+
+        def predict_(Xtest_i):
+            with torch.no_grad(), gpytorch.settings.fast_pred_var(), self.toeplitz, self.maxroot:
+                covar_i = self.likelihood(self.model(Xtest_i))
+                samples = torch.cat([covar_i.rsample() for _ in range(n_samples)])
+                samples = samples.reshape(n_samples, Xtest_i.shape[0], self.y.shape[1])
+                mean_i = torch.mean(samples, dim=0)
+                sd_i = torch.sqrt(torch.var(samples, dim=0))
+            return mean_i, sd_i
+
         if Xtest is None and self.Xtest is None:
             warnings.warn(
                 "No test data provided. Using training data for prediction",
@@ -238,7 +248,7 @@ class vreconstructor:
         n_samples = kwargs.get("n_samples", 100)
         self.model.eval()
         self.likelihood.eval()
-        batch_range = len(self.Xtest) // self.num_batches
+        batch_size = len(self.Xtest) // self.num_batches
         dtype_ = np.float32 if self.precision == 'single' else np.float64 
         mean = np.zeros((self.Xtest.shape[0], self.y.shape[-1]), dtype_)
         sd = np.zeros((self.Xtest.shape[0], self.y.shape[-1]), dtype_)
@@ -247,15 +257,15 @@ class vreconstructor:
         for i in range(self.num_batches):
             if self.verbose:
                 print("\rBatch {}/{}".format(i+1, self.num_batches), end="")
-            Xtest_i = self.Xtest[i*batch_range:(i+1)*batch_range]
-            with torch.no_grad(), gpytorch.settings.fast_pred_var(), self.toeplitz, self.maxroot:
-                covar_i = self.likelihood(self.model(Xtest_i))
-            samples = torch.cat([covar_i.rsample() for _ in range(n_samples)])
-            samples = samples.reshape(n_samples, Xtest_i.shape[0], self.y.shape[1])
-            mean_i = torch.mean(samples, dim=0)
-            sd_i = torch.sqrt(torch.var(samples, dim=0))
-            mean[i*batch_range:(i+1)*batch_range] = mean_i.detach().cpu().numpy()
-            sd[i*batch_range:(i+1)*batch_range] = sd_i.detach().cpu().numpy()
+            Xtest_i = self.Xtest[i*batch_size:(i+1)*batch_size]
+            mean_i, sd_i = predict_(Xtest_i)
+            mean[i*batch_size:(i+1)*batch_size] = mean_i.cpu().numpy()
+            sd[i*batch_size:(i+1)*batch_size] = sd_i.cpu().numpy()
+        Xtest_i = self.Xtest[(i+1)*batch_size:]
+        if len(Xtest_i) > 0:
+            mean_i, sd_i = predict_(Xtest_i)
+            mean[(i+1)*batch_size:] = mean_i.cpu().numpy()
+            sd[(i+1)*batch_size:] = sd_i.cpu().numpy()
         sd = sd.reshape(self.fulldims)
         mean = mean.reshape(self.fulldims)
         if self.verbose:

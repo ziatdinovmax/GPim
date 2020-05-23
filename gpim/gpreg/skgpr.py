@@ -272,6 +272,12 @@ class skreconstructor:
                 (for large datasets, you may not have enough GPU memory
                 to process the entire dataset at once)
         """
+
+        def predict_(Xtest_i):
+            with torch.no_grad(), gpytorch.settings.fast_pred_var(), self.toeplitz, self.maxroot:
+                covar_i = self.likelihood(self.model(Xtest_i))
+            return covar_i
+
         if Xtest is None and self.Xtest is None:
             warnings.warn(
                 "No test data provided. Using training data for prediction",
@@ -291,7 +297,7 @@ class skreconstructor:
             self.max_root = kwargs.get("max_root")
         self.model.eval()
         self.likelihood.eval()
-        batch_range = len(self.Xtest) // self.num_batches
+        batch_size = len(self.Xtest) // self.num_batches
         dtype_ = np.float32 if self.precision == 'single' else np.float64
         mean = np.zeros((self.Xtest.shape[0]), dtype_)
         sd = np.zeros((self.Xtest.shape[0]), dtype_)
@@ -300,11 +306,15 @@ class skreconstructor:
         for i in range(self.num_batches):
             if self.verbose:
                 print("\rBatch {}/{}".format(i+1, self.num_batches), end="")
-            Xtest_i = self.Xtest[i*batch_range:(i+1)*batch_range]
-            with torch.no_grad(), gpytorch.settings.fast_pred_var(), self.toeplitz, self.maxroot:
-                covar_i = self.likelihood(self.model(Xtest_i))
-            mean[i*batch_range:(i+1)*batch_range] = covar_i.mean.detach().cpu().numpy()
-            sd[i*batch_range:(i+1)*batch_range] = covar_i.stddev.detach().cpu().numpy()
+            Xtest_i = self.Xtest[i*batch_size:(i+1)*batch_size]
+            covar_i = predict_(Xtest_i)
+            mean[i*batch_size:(i+1)*batch_size] = covar_i.mean.cpu().numpy()
+            sd[i*batch_size:(i+1)*batch_size] = covar_i.stddev.cpu().numpy()
+        Xtest_i = self.Xtest[(i+1)*batch_size:]
+        if len(Xtest_i) > 0:
+            covar_i = predict_(Xtest_i)
+            mean[(i+1)*batch_size:] = covar_i.mean.cpu().numpy()
+            sd[(i+1)*batch_size:] = covar_i.stddev.cpu().numpy()
         sd = sd.reshape(self.fulldims)
         mean = mean.reshape(self.fulldims)
         if self.verbose:
