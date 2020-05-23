@@ -276,7 +276,8 @@ class skreconstructor:
         def predict_(Xtest_i):
             with torch.no_grad(), gpytorch.settings.fast_pred_var(), self.toeplitz, self.maxroot:
                 covar_i = self.likelihood(self.model(Xtest_i))
-            return covar_i
+                mean_i, sd_i = covar_i.mean, covar_i.stddev
+            return mean_i, sd_i
 
         if Xtest is None and self.Xtest is None:
             warnings.warn(
@@ -307,14 +308,14 @@ class skreconstructor:
             if self.verbose:
                 print("\rBatch {}/{}".format(i+1, self.num_batches), end="")
             Xtest_i = self.Xtest[i*batch_size:(i+1)*batch_size]
-            covar_i = predict_(Xtest_i)
-            mean[i*batch_size:(i+1)*batch_size] = covar_i.mean.cpu().numpy()
-            sd[i*batch_size:(i+1)*batch_size] = covar_i.stddev.cpu().numpy()
+            mean_i, sd_i = predict_(Xtest_i)
+            mean[i*batch_size:(i+1)*batch_size] = mean_i.cpu().numpy()
+            sd[i*batch_size:(i+1)*batch_size] = sd_i.cpu().numpy()
         Xtest_i = self.Xtest[(i+1)*batch_size:]
         if len(Xtest_i) > 0:
-            covar_i = predict_(Xtest_i)
-            mean[(i+1)*batch_size:] = covar_i.mean.cpu().numpy()
-            sd[(i+1)*batch_size:] = covar_i.stddev.cpu().numpy()
+            mean_i, sd_i = predict_(Xtest_i)
+            mean[(i+1)*batch_size:] = mean_i.cpu().numpy()
+            sd[(i+1)*batch_size:] = sd_i.cpu().numpy()
         sd = sd.reshape(self.fulldims)
         mean = mean.reshape(self.fulldims)
         if self.verbose:
