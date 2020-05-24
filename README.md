@@ -15,7 +15,7 @@ GPim is a python package that provides an easy way to apply Gaussian processes (
 <br><br>
 Scientific papers where GPim was used:
 
-- GP for 3D hyperspectral microscopy data: [paper](https://arxiv.org/abs/1911.11348)
+- GP for 3D hyperspectral microscopy data: [paper](https://www.nature.com/articles/s41524-020-0289-6)
 
 - GP for 4D hyperspectral microscopy data: [paper](https://arxiv.org/abs/2002.03591)
 
