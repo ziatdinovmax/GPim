@@ -23,7 +23,7 @@ def confidence_bound(gpmodel, X_full, **kwargs):
             :math:`\\alpha` coefficient in :math:`\\alpha \\mu + \\beta \\sigma`
         **beta (float):
             :math:`\\beta` coefficient in :math:`\\alpha \\mu + \\beta \\sigma`
-    
+
     Returns:
         Acquisition function values and GP prediction (mean + stddev)
     """
@@ -48,7 +48,7 @@ def expected_improvement(gpmodel, X_full, X_sparse, **kwargs):
             Sparse grid indices
         **xi (float):
             xi constant value
-    
+
     Returns:
         Acquisition function values and GP prediction (mean + stddev)
     """
@@ -77,7 +77,7 @@ def probability_of_improvement(gpmodel, X_full, X_sparse, **kwargs):
             Sparse grid indices
         **xi (float):
             xi constant value
-    
+
     Returns:
         Acquisition function values and GP prediction (mean + stddev)
     """

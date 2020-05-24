@@ -15,7 +15,9 @@ test_img_cb = os.path.join(
 
 
 def trial_func(idx, **kwargs):
-    """Trial function, which takes a list of indices as input"""
+    """
+    Trial function, which takes a list of indices as input
+    """
     x0 = kwargs.get("x0", 5)
     y0 = kwargs.get("y0", 10)
     fwhm = kwargs.get("fwhm", 4.5)
@@ -24,7 +26,9 @@ def trial_func(idx, **kwargs):
 
 
 def initial_seed():
-    """Creates sparse data (initial seed)"""
+    """
+    Creates sparse data (initial seed)
+    """
     np.random.seed(0)
     x = np.arange(0, 25, 1.)
     y = x[:, np.newaxis]
