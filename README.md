@@ -13,7 +13,7 @@
 
 GPim is a python package that provides an easy way to apply Gaussian processes (GP) in [Pyro](https://pyro.ai/) and [Gpytorch](https://gpytorch.ai/) to images and hyperspectral data and to perform GP-based Bayesian optimization on grid data. The intended audience are domain scientists (for example, microscopists) with a basic knowledge of how to work with numpy arrays in Python.
 <br><br>
-For the examples, see the papers where GPim was used:
+Scientific papers where GPim was used:
 
 - GP for 3D hyperspectral microscopy data: [paper](https://arxiv.org/abs/1911.11348)
 
