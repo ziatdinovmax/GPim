@@ -15,13 +15,13 @@ GPim is a python package that provides an easy way to apply Gaussian processes (
 <br><br>
 For the examples, see the papers where GPim was used:
 
-GP for 3D hyperspectral microscopy data: https://arxiv.org/abs/1911.11348
+- GP for 3D hyperspectral microscopy data: https://arxiv.org/abs/1911.11348
 
-GP for 4D hyperspectral microscopy data: https://arxiv.org/abs/2002.03591
+- GP for 4D hyperspectral microscopy data: https://arxiv.org/abs/2002.03591
 
-GP and GP-based BO for Ising model: https://arxiv.org/abs/2004.04832
+- GP and GP-based BO for Ising model: https://arxiv.org/abs/2004.04832
 
-GP-based BO for hysteresis loop engineering in ferroelectrics: https://arxiv.org/abs/2004.12512
+- GP-based BO for hysteresis loop engineering in ferroelectrics: https://arxiv.org/abs/2004.12512
  
 <p align="center">
   <img src="misc/GPim_illustration_v2.png" width="75%" title="GPim">
@@ -108,7 +108,7 @@ gpim.utils.plot_query_points(boptim.indices_all, plot_lines=True)
 
 ## Running GPim notebooks in the cloud
 
-1) Executable Google Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/examples/notebooks/GP_2D3D_images.ipynb) with the example of applying GP to sparse spiral 2D scans in piezoresponse force microscopy (PFM) and hyperspectral 3D data in Band Excitation PFM.
+1) Executable Google Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/examples/notebooks/GP_2D3D_images.ipynb) with the examples of applying GP to sparse spiral 2D scans in piezoresponse force microscopy (PFM), simulated 2D atomic image in electron microscopy, and hyperspectral 3D data in Band Excitation PFM.
 2) Executable Google Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/examples/notebooks/GP_EELS.ipynb) with the example of applying "parallel" GP method to analysis of EELS data.
 3) Executable Google Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/examples/notebooks/GP_TD_cKPFM.ipynb) with the example of applying GP to 4D spectroscopic dataset for smoothing and resolution enhancement in contact Kelvin Probe Force Microscopy (cKPFM).
 4) Executable Google Colab [notebook](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/examples/notebooks/GP_based_exploration_exploitation.ipynb) with a simple example of performing GP-based exploration-exploitation on a toy dataset.
