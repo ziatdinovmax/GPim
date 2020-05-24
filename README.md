@@ -15,13 +15,13 @@ GPim is a python package that provides an easy way to apply Gaussian processes (
 <br><br>
 For the examples, see the papers where GPim was used:
 
-- GP for 3D hyperspectral microscopy data: https://arxiv.org/abs/1911.11348
+- GP for 3D hyperspectral microscopy data: [paper](https://arxiv.org/abs/1911.11348)
 
-- GP for 4D hyperspectral microscopy data: https://arxiv.org/abs/2002.03591
+- GP for 4D hyperspectral microscopy data: [paper](https://arxiv.org/abs/2002.03591)
 
-- GP and GP-based BO for Ising model: https://arxiv.org/abs/2004.04832
+- GP and GP-based BO for Ising model: [paper](https://arxiv.org/abs/2004.04832)
 
-- GP-based BO for hysteresis loop engineering in ferroelectrics: https://arxiv.org/abs/2004.12512
+- GP-based BO for hysteresis loop engineering in ferroelectrics: [paper](https://arxiv.org/abs/2004.12512)
  
 <p align="center">
   <img src="misc/GPim_illustration_v2.png" width="75%" title="GPim">
