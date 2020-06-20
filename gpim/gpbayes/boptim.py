@@ -87,7 +87,7 @@ class boptimizer:
             Defaults to total_number_of_points // 10.
         learning_rate (float):
             Learning rate for GP model training
-        iterations (int):
+        gp_iterations (int):
             Number of SVI training iteratons for GP model
         seed (int):
             for reproducibility
@@ -154,7 +154,7 @@ class boptimizer:
                  lengthscale=None,
                  sparse=False,
                  indpoints=None,
-                 iterations=1000,
+                 gp_iterations=1000,
                  seed=0,
                  **kwargs):
         """
@@ -212,7 +212,7 @@ class boptimizer:
         self.surrogate_model.train(verbose=self.verbose)
         return
 
-    def evaluate_function(self, indices):
+    def evaluate_function(self, indices, y_measured=None):
         """
         Evaluates target function in the new point(s)
         """
@@ -220,6 +220,9 @@ class boptimizer:
         if self.simulate_measurement:
             for idx in indices:
                 self.y_sparse[tuple(idx)] = self.y_true[tuple(idx)]
+        elif y_measured is not None:
+            for idx in indices:
+                self.y_sparse[tuple(idx)] = y_measured[tuple(idx)]
         else:
             for idx in indices:
                 if self.extent is not None:
