@@ -87,7 +87,7 @@ class boptimizer:
             Defaults to total_number_of_points // 10.
         learning_rate (float):
             Learning rate for GP model training
-        iterations (int):
+        gp_iterations (int):
             Number of SVI training iteratons for GP model
         seed (int):
             for reproducibility
@@ -154,7 +154,7 @@ class boptimizer:
                  lengthscale=None,
                  sparse=False,
                  indpoints=None,
-                 iterations=1000,
+                 gp_iterations=1000,
                  seed=0,
                  **kwargs):
         """
@@ -171,7 +171,7 @@ class boptimizer:
 
         self.surrogate_model = gpr.reconstructor(
             X_seed, y_seed, X_full, kernel, lengthscale, sparse, indpoints,
-            learning_rate, iterations, self.use_gpu, self.verbose, seed)
+            learning_rate, gp_iterations, self.use_gpu, self.verbose, seed)
 
         self.X_sparse = X_seed.copy()
         self.y_sparse = y_seed.copy()
@@ -212,7 +212,7 @@ class boptimizer:
         self.surrogate_model.train(verbose=self.verbose)
         return
 
-    def evaluate_function(self, indices):
+    def evaluate_function(self, indices=None, y_measured=None):
         """
         Evaluates target function in the new point(s)
         """
@@ -220,6 +220,12 @@ class boptimizer:
         if self.simulate_measurement:
             for idx in indices:
                 self.y_sparse[tuple(idx)] = self.y_true[tuple(idx)]
+        elif y_measured is not None:
+            if indices is not None:
+                for idx in indices:
+                    self.y_sparse[tuple(idx)] = y_measured[tuple(idx)]
+            else:
+                self.y_sparse = y_measured
         else:
             for idx in indices:
                 if self.extent is not None:
@@ -347,7 +353,7 @@ class boptimizer:
             # Calculate distances between current point and previous n points
             d_all = [np.linalg.norm(np.array(idx) - np.array(i)) for i in idx_prev]
             # Calculate weighting coefficient for each distance
-            dscale_all = [dscale_*self.gamma*i for i in range(len(idx_prev))]
+            dscale_all = [dscale_*self.gamma**i for i in range(len(idx_prev))]
             # Check if each distance satisfies the imposed criteria
             bool_ = 0 in [d > l for (d, l) in zip(d_all[::-1], dscale_all)]
             return bool_
