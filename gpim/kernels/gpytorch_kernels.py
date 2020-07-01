@@ -15,7 +15,7 @@ def get_kernel(kernel_type, input_dim, on_gpu=True, **kwargs):
 
     Args:
         kernel_type (str):
-            Kernel type ('RBF', Matern52')
+            Kernel type ('RBF', Matern52', 'Spectral)
         input_dim (int):
             Number of input dimensions
             (translates into number of kernel dimensions unless isotropic=True)
@@ -27,6 +27,8 @@ def get_kernel(kernel_type, input_dim, on_gpu=True, **kwargs):
             number of elements in each list is equal to the input dimensions
         **isotropic (bool):
             one kernel lengthscale in all dimensions
+        **n_mixtures (int):
+            number of mixtures for spectral mixture kernel
         **precision (str):
             Choose between single ('single') and double ('double') precision
     Returns:
@@ -47,12 +49,15 @@ def get_kernel(kernel_type, input_dim, on_gpu=True, **kwargs):
 
     lscale = kwargs.get('lengthscale')
     isotropic = kwargs.get("isotropic")
+    nmix = kwargs.get("n_mixtures")
+    if nmix is None:
+        nmix = 4
     if lscale is not None:
         lscale = gpytorch.constraints.Interval(torch.tensor(lscale[0]),
                                                torch.tensor(lscale[1]))
     input_dim = 1 if isotropic else input_dim
-    # initialize the kernel
-    kernel_book = lambda input_dim, lscale: {
+
+    kernel_book = lambda input_dim, lscale, **kwargs: {
         'RBF': gpytorch.kernels.RBFKernel(
             ard_num_dims=input_dim,
             lengthscale_constraint=lscale
@@ -60,12 +65,16 @@ def get_kernel(kernel_type, input_dim, on_gpu=True, **kwargs):
         'Matern52': gpytorch.kernels.MaternKernel(
             ard_num_dims=input_dim,
             lengthscale_constraint=lscale
-            )
+            ),
+        'Spectral': gpytorch.kernels.SpectralMixtureKernel(
+            ard_num_dims=input_dim,
+            num_mixtures=kwargs.get("nmix")
+        )
     }
     try:
-        kernel = kernel_book(input_dim, lscale)[kernel_type]
+        kernel = kernel_book(input_dim, lscale, nmix=nmix)[kernel_type]
     except KeyError:
         print('Select one of the currently available kernels:',\
-              '"RBF", "Matern52"')
+              '"RBF", "Matern52", "Spectral"')
         raise
     return kernel

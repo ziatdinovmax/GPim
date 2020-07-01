@@ -8,212 +8,16 @@ with Gaussian processes.
 Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
 """
 
-import os
 import copy
-import numpy as np
-from scipy import spatial
-import torch
-from torch.distributions import transform_to, constraints
-import pyro
-import matplotlib.pyplot as plt
+import os
+
 import matplotlib.cm as cm
+import matplotlib.pyplot as plt
+import numpy as np
+import pyro
+import torch
 from mpl_toolkits.mplot3d import Axes3D
-
-
-def acquisition2d(mean, sd, acquisition_function=None, lscale=0, batch_size=None):
-    """
-    Takes GP-predicted mean and standard deviation (sd)
-    and computes the next query points for 2D datasets
-    and 3D datasets where mean and sd can be summed along
-    the 3rd dimension (e.g. hyperspectral :math:`f(x, y, E)`
-    measurements with sparsity in spatial (*xy*) domain only)
-    """
-    if np.ndim(sd) > 3 or np.ndim(mean) > 3:
-        raise AssertionError("Inputs should be 2D or 3D")
-    if np.ndim(sd) == 3:
-        sd = np.sum(sd, axis=-1)
-    if np.ndim(mean) == 3:
-        mean = np.sum(mean, axis=-1)
-    vals_list, indices_list = acquisition(
-        mean, sd, acquisition_function=None, lscale=0, batch_size=None)
-    return vals_list, indices_list
-
-
-def acquisition(mean, sd,
-                acquisition_function=None, batch_size=100,
-                batch_update=False, lscale=0):
-    """
-    Takes GP-predicted mean and standard deviation
-    and computes a batch of the next query points
-
-    Args:
-        mean (ndarray)
-            GP-predicted mean with dimensions
-            :math:`N \\times M` or :math:`N \\times M \\times L`.
-            For hyperspectral data, *N* and *M* usually correspond
-            to spatial dimensions, whereas *L* is an "energy"dimension
-        sd (ndarray)
-            GP-predicted standard deviation with dimensions
-            :math:`N \\times M` or :math:`N \\times M \\times L`.
-            For hyperspectral data, *N* and *M* usually correspond
-            to spatial dimensions, whereas *L* is an "energy"dimension
-        acquisition_function (python function):
-            Function that takes two parameters, mean and sd,
-            applies some math operation to them
-            (e.g. :math:`\\upmu - 2 \\times \\upsigma`)
-            and returns the result
-        batch_size (int):
-                Number of query points to return
-        batch_update:
-            Filters the query points based on the specified lengthscale
-        lscale (float):
-            Lengthscale determining the separation (euclidean)
-            distance between query points. Defaults to the kernel
-            lengthscale
-
-    Returns:
-        Indices and values of the points with the largest values
-        of acquisition function
-    """
-    indices_list, vals_list = [], []
-    if acquisition_function is None:
-        acq = sd
-    else:
-        acq = acquisition_function(mean, sd)
-    for i in range(batch_size):
-        amax_idx = [i[0] for i in np.where(acq == acq.max())]
-        indices_list.append(amax_idx)
-        vals_list.append(acq.max())
-        acq[tuple(amax_idx)] = acq.min() - 1
-    if not batch_update:
-        return vals_list, indices_list
-    vals_list, indices_list = next_batch(
-        np.array(vals_list),
-        np.vstack(indices_list),
-        lscale)
-    return vals_list, indices_list
-
-
-def next_batch(acqfunc_values, indices, lscale):
-    """
-    Returns a batch of query points whose separation distance
-    is determined by kernel lengthscale
-    Args:
-        acqfunc_values (ndarray):
-            (*N*,) numpy array with values of acquisition function
-        indices (ndarray):
-            (*N*, *c*) numpy array with corresponding indices,
-            where c ia a number of dimensions of the dataset
-        lscale (float):
-            kernel lengthscale
-
-    Returns:
-        Tuple with computed indices and corresponding values
-    """
-    minval = acqfunc_values.min()
-    new_max = acqfunc_values.max()
-    new_max_id = np.argmax(acqfunc_values)
-    max_val_all, max_id_all = [], []
-    ck = indices[new_max_id]
-    tree = spatial.cKDTree(indices)
-    while new_max > minval - 1:
-        max_val_all.append(new_max)
-        max_id_all.append(new_max_id)
-        nn_indices = tree.query_ball_point(ck, lscale)
-        acqfunc_values[nn_indices] = minval - 1
-        new_max = acqfunc_values.max()
-        new_max_id = np.argmax(acqfunc_values)
-        ck = indices[new_max_id]
-    return max_val_all, indices[max_id_all].tolist()
-
-
-def mask_edges(imgdata, dist_edge):
-    """
-    Masks edges of 2D image
-
-    Args:
-        imgdata (ndarray):
-            2D image whose edges we want to mask
-        dist_edge (list of two integers):
-            Distance from edges for masking
-
-    Returns:
-        2D image (as numpy array) with edge regions removed
-    """
-    e1, e2 = imgdata.shape
-    mask = np.zeros((e1, e2), bool)
-    mask[dist_edge[0]:e1-dist_edge[0],
-         dist_edge[1]:e2-dist_edge[1]] = True
-    return imgdata * mask
-
-
-def checkvalues(uncert_idx_list, uncert_idx_all, uncert_val_list, verbose=True):
-    """
-    Checks if the indices were already used
-    (helps not to get stuck in one point during GP-based sample exploration)
-
-    Args:
-        uncert_idx_list (list of lists with ints):
-            Indices of max uncertainty points for one measurement;
-            the list is ordered (max uncertainty -> min uncertainty)
-        uncert_idx_all (list of lists with integers):
-            Indices of the already selected points from previous measurements
-        uncert_val_list (list with floats):
-            Standard deviation values for each index in uncert_idx_list
-            (ordered as max uncertainty -> min uncertainty)
-
-    Returns:
-        The first element in the input list (uncert_idx_list)
-        if no previous occurences found.
-        Otherwise, returns the next/closest value from the list.
-    """
-    _idx = 0
-    if verbose:
-        print('Acquisition function value {} at {}'.format(
-            uncert_val_list[_idx], uncert_idx_list[_idx]))
-    if len(uncert_idx_all) == 0:
-        return uncert_idx_list[_idx], uncert_val_list[_idx]
-    while 1 in [1 for a in uncert_idx_all if a == uncert_idx_list[_idx]]:
-        if verbose:
-            print("Finding the next max point...")
-        _idx = _idx + 1
-        if verbose:
-            print('Acquisition function value {} at {}'.format(
-                uncert_val_list[_idx], uncert_idx_list[_idx]))
-    return uncert_idx_list[_idx], uncert_val_list[_idx]
-
-
-def do_measurement(R_true, X_true, R, X, uncertmax, measure):
-    """
-    Makes a "measurement" by opening a part of a ground truth
-    when working with already acquired or synthetic data
-
-    Args:
-        R_true (ndarray):
-            Full observations ('ground truth');
-        X_true (ndarray):
-            Grid indices for full observation;
-        R (ndarray):
-            Partial observations (missing values are NaNs);
-        X (ndarray):
-            Grid indices for partial observations (missing points are NaNs)
-        uncertmax (list):
-            indices of point with maximum uncertainty
-            (as determined by GP regression model)
-        measure (int):
-            half of measurement square
-
-    Returns:
-        Updated R and X ndarrays
-    """
-    a0, a1 = uncertmax
-    # make "observation"
-    R_obs = R_true[a0-measure:a0+measure+1, a1-measure:a1+measure+1]
-    X_obs = X_true[:, a0-measure:a0+measure+1, a1-measure:a1+measure+1]
-    # update the input
-    R[a0-measure:a0+measure+1, a1-measure:a1+measure+1] = R_obs
-    X[:, a0-measure:a0+measure+1, a1-measure:a1+measure+1] = X_obs
-    return R, X
+from torch.distributions import constraints, transform_to
 
 
 def prepare_training_data(X, y, vector_valued=False, **kwargs):
@@ -578,14 +382,17 @@ def open_edge_points(R, R_true, s=6):
 
 def plot_kernel_hyperparams(hyperparams):
     """
-    Plots evolution of kernel hyperparameters (lengthscale, variance, noise)
-    as a function of SVI steps
+    Plots evolution of kernel hyperparameters
+    as a function of training steps
 
     Args:
         hyperparams (dict):
             dictionary with kernel hyperparameters
-            (see gpr.reconstructor)
+            (see gpreg.gpr.reconstructor)
     """
+    if "weights" in hyperparams.keys():
+        plot_mixture_hyperparams(hyperparams)
+        return
     if 'variance' in hyperparams.keys():
         _, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(16, 4))
     else:
@@ -607,6 +414,69 @@ def plot_kernel_hyperparams(hyperparams):
         ax3.set_title('variance')
         ax3.set_xlabel('SVI iteration')
         ax3.set_ylabel('variance (px)')
+    plt.show()
+
+
+def plot_mixture_hyperparams(hyperparams):
+    """
+    Plots evolution of spectral mixture kernel hyperparameters
+    as a function of training iterations
+
+    Args:
+        hyperparams (dict):
+            dictionary with kernel hyperparameters
+            (see gpreg.skgpr.skreconstructor)
+    """
+    means = hyperparams["means"]
+    scales = hyperparams["scales"]
+    weights = hyperparams["weights"]
+    noise = hyperparams["noise"]
+    maxdim = hyperparams["maxdim"]
+
+    if scales[0].shape[-1] != 2:
+        raise NotImplementedError(
+            "Currently supports plotting only for 2D cases"
+        )
+
+    print("Mixture (final) weights:")
+    for i, w in enumerate(weights[-1]):
+        print("Component {}: w = {}".format(i, w.astype(np.float64).round(5)))
+
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(21, 6))
+    for i, m in enumerate(means):
+        label1 = "x coordinate" if i == len(means) - 1 else None
+        label2 = "y coordinate" if i == len(means) - 1 else None
+        ax1.scatter(np.tile(i, len(m)), m[:, 0, 0], s=18, c=np.arange(len(m)), cmap='jet', label=label1)
+        ax1.scatter(np.tile(i, len(m)), m[:, 0, 1], s=18, marker='x', c=np.arange(len(m)), cmap='jet', label=label2)
+    ax1.set_xlabel("Iteration", fontsize=14)
+    ax1.set_ylabel("Mixture mean/period (px)", fontsize=14)
+    ax1.set_title("Mixtures mean (period)", fontsize=14)
+    ax1.legend()
+
+    for i, s in enumerate(scales):
+        label1 = "x coordinate" if i == len(scales) - 1 else None
+        label2 = "y coordinate" if i == len(scales) - 1 else None
+        ax2.scatter(np.tile(i, len(s)), s[:, 0, 0], s=18, c=np.arange(len(s)), cmap='jet', label=label1)
+        ax2.scatter(np.tile(i, len(s)), s[:, 0, 1], s=18, marker='x', c=np.arange(len(s)), cmap='jet', label=label2)
+    ax2.set_xlabel("Iteration", fontsize=14)
+    ax2.set_ylabel("Mixture scale (px)", fontsize=14)
+    ax2.set_title("Mixtures scales", fontsize=14)
+    ax2.legend()
+
+    ax3.plot(noise, linewidth=3)
+    ax3.set_ylabel("noise (px)", fontsize=14)
+    ax3.set_xlabel("Iteration", fontsize=14)
+    ax3.set_title("noise", fontsize=14)
+
+    ax1.set_ylim(0, maxdim)
+    ax2.set_ylim(0, maxdim)
+
+    clrbar = np.linspace(1, len(m)).reshape(-1, 1)
+    ax_ = fig.add_axes([.36, -.12, .3, .8])
+    img = plt.imshow(clrbar, cmap='jet')
+    plt.gca().set_visible(False)
+    clrbar = plt.colorbar(img, ax=ax_, orientation='horizontal')
+    clrbar.set_label('Mixture component', fontsize=14, labelpad=10)
     plt.show()
 
 
