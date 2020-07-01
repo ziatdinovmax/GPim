@@ -24,12 +24,12 @@ if __name__ == "__main__":
         packages=find_packages(include=['gpim', 'gpim.*']),
         zip_safe=False,
         install_requires=[
-            'numpy>=1.16.5',
-            'scipy>=1.3.0',
-            'matplotlib>=3.1.1',
-            'torch>=1.3.1',
-            'pyro-ppl>=0.4.1',
-            'gpytorch>=0.3.6,<1.1.1',
+            'numpy==1.18.5',
+            'scipy==1.5.0',
+            'matplotlib==3.2.2',
+            'torch==1.3.1',
+            'pyro-ppl=1.3.1',
+            'gpytorch==1.1.1',
             'scikit-image==0.16.2'
         ],
         classifiers=['Programming Language :: Python',
