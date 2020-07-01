@@ -27,7 +27,7 @@ if __name__ == "__main__":
             'numpy==1.18.5',
             'scipy==1.4.1',
             'matplotlib==3.2.2',
-            'torch==1.3.1',
+            'torch==1.4.0',
             'pyro-ppl==1.3.1',
             'gpytorch==1.0.0',
             'scikit-image==0.16.2'
