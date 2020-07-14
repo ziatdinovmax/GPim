@@ -166,7 +166,7 @@ class boptimizer:
         self.use_gpu = kwargs.get("use_gpu", False)
         learning_rate = kwargs.get("learning_rate", 5e-2)
         
-        self.precision = kwargs.get("precision")
+        self.precision = kwargs.get("precision", "double")
 
         if self.use_gpu and torch.cuda.is_available():
             if self.precision == "single":
