@@ -87,7 +87,7 @@ class boptimizer:
             Defaults to total_number_of_points // 10.
         learning_rate (float):
             Learning rate for GP model training
-        iterations (int):
+        gp_iterations (int):
             Number of SVI training iteratons for GP model
         seed (int):
             for reproducibility
@@ -106,6 +106,8 @@ class boptimizer:
             Notice that for large datasets training model without GPU
             is extremely slow. At the same time, for small and (very) sparse data
             there may be no much benefit.
+        **precision (str):
+            "single" ot "double" floating point precision
         **mask (ndarray):
             Mask of ones and NaNs (NaNs are values that are not counted when
             searching for acquisition function maximum).
@@ -154,7 +156,7 @@ class boptimizer:
                  lengthscale=None,
                  sparse=False,
                  indpoints=None,
-                 iterations=1000,
+                 gp_iterations=1000,
                  seed=0,
                  **kwargs):
         """
@@ -163,16 +165,25 @@ class boptimizer:
         self.verbose = kwargs.get("verbose", 1)
         self.use_gpu = kwargs.get("use_gpu", False)
         learning_rate = kwargs.get("learning_rate", 5e-2)
+        
+        self.precision = kwargs.get("precision", "double")
 
         if self.use_gpu and torch.cuda.is_available():
-            torch.set_default_tensor_type(torch.cuda.DoubleTensor)
+            if self.precision == "single":
+                torch.set_default_tensor_type(torch.cuda.FloatTensor)
+            else:
+                torch.set_default_tensor_type(torch.cuda.DoubleTensor)
         else:
-            torch.set_default_tensor_type(torch.DoubleTensor)
+            if self.precision == "single":
+                torch.set_default_tensor_type(torch.FloatTensor)
+            else:
+                torch.set_default_tensor_type(torch.DoubleTensor)
 
         self.surrogate_model = gpr.reconstructor(
             X_seed, y_seed, X_full, kernel, lengthscale, sparse, indpoints,
-            learning_rate, iterations, self.use_gpu, self.verbose, seed)
-
+            learning_rate, gp_iterations, self.use_gpu, self.verbose, seed,
+            precision=self.precision)
+        
         self.X_sparse = X_seed.copy()
         self.y_sparse = y_seed.copy()
         self.X_full = X_full
@@ -204,7 +215,7 @@ class boptimizer:
         Updates GP posterior
         """
         X_sparse_new, y_sparse_new = gprutils.prepare_training_data(
-            self.X_sparse, self.y_sparse)
+            self.X_sparse, self.y_sparse, precision=self.precision)
         if self.use_gpu and torch.cuda.is_available():
             X_sparse_new, y_sparse_new = X_sparse_new.cuda(), y_sparse_new.cuda()
         self.surrogate_model.model.X = X_sparse_new
@@ -212,7 +223,7 @@ class boptimizer:
         self.surrogate_model.train(verbose=self.verbose)
         return
 
-    def evaluate_function(self, indices):
+    def evaluate_function(self, indices, y_measured=None):
         """
         Evaluates target function in the new point(s)
         """
@@ -220,6 +231,9 @@ class boptimizer:
         if self.simulate_measurement:
             for idx in indices:
                 self.y_sparse[tuple(idx)] = self.y_true[tuple(idx)]
+        elif y_measured is not None:
+            for idx in indices:
+                self.y_sparse[tuple(idx)] = y_measured[tuple(idx)]
         else:
             for idx in indices:
                 if self.extent is not None:
