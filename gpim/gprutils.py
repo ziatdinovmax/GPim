@@ -20,7 +20,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from torch.distributions import constraints, transform_to
 
 
-def prepare_training_data(X, y, vector_valued=False, **kwargs):
+def prepare_training_data(X, y=None, vector_valued=False, **kwargs):
     """
     Reshapes and converts data to torch tensors for GP analysis
 
@@ -48,6 +48,8 @@ def prepare_training_data(X, y, vector_valued=False, **kwargs):
     tor = lambda n: torch.from_numpy(n).type(tensor_type)
     X = X.reshape(X.shape[0], np.product(X.shape[1:])).T
     X = tor(X[~np.isnan(X).any(axis=1)])
+    if y is None:
+        return X, y
     if vector_valued:
         y = y.reshape(np.product(y.shape[:-1]), y.shape[-1])
         y = tor(y[~np.isnan(y).any(axis=1)])

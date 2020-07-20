@@ -13,7 +13,7 @@ module_dir = os.path.dirname(os.path.abspath(__file__))
 if __name__ == "__main__":
     setup(
         name='gpim',
-        version='0.3.2',
+        version='0.3.3',
         description='Gaussian processes for image analysis',
         long_description=open(os.path.join(module_dir, 'README.md')).read(),
         long_description_content_type='text/markdown',
