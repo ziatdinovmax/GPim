@@ -140,7 +140,6 @@ class skreconstructor:
                            [lmean for l in range(input_dim)]]
         elif lengthscale is None and isotropic:
             lengthscale = [0., (np.mean(y.shape) / 2).astype(npfloat_)]
-        print(lengthscale)
         _kernel = gpytorch_kernels.get_kernel(
             kernel, input_dim, use_gpu, lengthscale=lengthscale,
             isotropic=isotropic, precision=self.precision,
