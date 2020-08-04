@@ -94,6 +94,7 @@ class reconstructor:
         else:
             self.tensor_type = torch.DoubleTensor
             self.tensor_type_gpu = torch.cuda.DoubleTensor
+        npfloat_ = np.float32 if self.precision == "single" else np.float64
         self.verbose = verbose
         torch.manual_seed(seed)
         pyro.set_rng_seed(seed)
@@ -113,10 +114,11 @@ class reconstructor:
             X, y, precision=self.precision)
         self.do_sparse = sparse
         if lengthscale is None and not kwargs.get("isotropic"):
+            lmean = (np.mean(y.shape) / 2).astype(npfloat_)
             lengthscale = [[0. for l in range(input_dim)],
-                           [np.mean(y.shape) / 2 for l in range(input_dim)]]  # TODO Make separate lscale for each dim
+                           [lmean for l in range(input_dim)]]  # TODO Make separate lscale for each dim
         elif lengthscale is None and kwargs.get("isotropic"):
-            lengthscale = [0., np.mean(y.shape) / 2]
+            lengthscale = [0., (np.mean(y.shape) / 2).astype(npfloat_)]
         kernel = pyro_kernels.get_kernel(
             kernel, input_dim, lengthscale, use_gpu,
             amplitude=kwargs.get('amplitude'), precision=self.precision)

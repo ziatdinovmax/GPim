@@ -100,6 +100,7 @@ class skreconstructor:
         else:
             self.tensor_type = torch.DoubleTensor
             self.tensor_type_gpu = torch.cuda.DoubleTensor
+        npfloat_ = np.float32 if self.precision == "single" else np.float64
         torch.manual_seed(seed)
         if use_gpu and torch.cuda.is_available():
             torch.cuda.empty_cache()
@@ -112,10 +113,11 @@ class skreconstructor:
             self.fulldims = Xtest.shape[1:]
         else:
             self.fulldims = X.shape[1:]
-        X, y = gprutils.prepare_training_data(X, y, precision=self.precision)
+        self.X, self.y = gprutils.prepare_training_data(
+            X, y, precision=self.precision)
         if Xtest is not None:
-            Xtest = gprutils.prepare_test_data(Xtest, precision=self.precision)
-        self.X, self.y, self.Xtest = X, y, Xtest
+            self.Xtest = gprutils.prepare_test_data(
+                Xtest, precision=self.precision)
         self.do_ski = ski
         if kernel == "Spectral":
             self.do_ski = False
@@ -132,6 +134,12 @@ class skreconstructor:
         self.likelihood = gpytorch.likelihoods.GaussianLikelihood()
         isotropic = kwargs.get("isotropic")
         n_mixtures = kwargs.get("n_mixtures")
+        if lengthscale is None and not isotropic:
+            lmean = (np.mean(y.shape) / 2).astype(npfloat_)
+            lengthscale = [[0. for l in range(input_dim)],
+                           [lmean for l in range(input_dim)]]
+        elif lengthscale is None and isotropic:
+            lengthscale = [0., (np.mean(y.shape) / 2).astype(npfloat_)]
         _kernel = gpytorch_kernels.get_kernel(
             kernel, input_dim, use_gpu, lengthscale=lengthscale,
             isotropic=isotropic, precision=self.precision,
