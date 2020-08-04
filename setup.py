@@ -1,6 +1,6 @@
 __author__ = "Maxim Ziatdinov"
 __copyright__ = "Copyright Maxim Ziatdinov (2020)"
-__version__ = "0.3.2"
+__version__ = "0.3.4"
 __maintainer__ = "Maxim Ziatdinov"
 __email__ = "maxim.ziatdinov@ai4microcopy.com"
 __date__ = "05/20/2020"
@@ -13,7 +13,7 @@ module_dir = os.path.dirname(os.path.abspath(__file__))
 if __name__ == "__main__":
     setup(
         name='gpim',
-        version='0.3.3',
+        version='0.3.4',
         description='Gaussian processes for image analysis',
         long_description=open(os.path.join(module_dir, 'README.md')).read(),
         long_description_content_type='text/markdown',
@@ -28,7 +28,7 @@ if __name__ == "__main__":
             'matplotlib>=3.1.1',
             'torch>=1.3.1',
             'pyro-ppl>=0.4.1',
-            'gpytorch>=0.3.6,
+            'gpytorch>=0.3.6',
             'scikit-image==0.16.2'
         ],
         classifiers=['Programming Language :: Python',
