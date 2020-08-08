@@ -217,6 +217,7 @@ class boptimizer:
         X_sparse_new, y_sparse_new = gprutils.prepare_training_data(
             self.X_sparse, self.y_sparse, precision=self.precision)
         if self.use_gpu and torch.cuda.is_available():
+            torch.cuda.empty_cache()
             X_sparse_new, y_sparse_new = X_sparse_new.cuda(), y_sparse_new.cuda()
         self.surrogate_model.model.X = X_sparse_new
         self.surrogate_model.model.y = y_sparse_new
