@@ -167,7 +167,7 @@ class boptimizer:
         self.verbose = kwargs.get("verbose", 1)
         self.use_gpu = kwargs.get("use_gpu", False)
         learning_rate = kwargs.get("learning_rate", 5e-2)
-        jitter = kwargs.get("jitter", 1.0e-5)
+        jitter = kwargs.get("jitter", 1.0e-6)
 
         self.precision = kwargs.get("precision", "double")
 
