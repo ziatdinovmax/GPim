@@ -1,6 +1,6 @@
 [![Downloads](https://pepy.tech/badge/gpim/month)](https://pepy.tech/project/gpim/month)
 [![PyPI version](https://badge.fury.io/py/gpim.svg)](https://badge.fury.io/py/gpim)
-[![Build Status](https://travis-ci.com/ziatdinovmax/atomai.svg?branch=master)](https://travis-ci.com/ziatdinovmax/atomai)
+[![Build Status](https://travis-ci.com/ziatdinovmax/gpim.svg?branch=master)](https://travis-ci.com/ziatdinovmax/gpim)
 [![Documentation Status](https://readthedocs.org/projects/gpim/badge/?version=latest)](https://gpim.readthedocs.io/en/latest/?badge=latest)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/07ee1606a88b48d1bc46453f3ae1b1c8)](https://app.codacy.com/manual/ziatdinovmax/GPim?utm_source=github.com&utm_medium=referral&utm_content=ziatdinovmax/GPim&utm_campaign=Badge_Grade_Dashboard)
 
