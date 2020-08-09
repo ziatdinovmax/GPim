@@ -108,6 +108,8 @@ class boptimizer:
             there may be no much benefit.
         **precision (str):
             "single" ot "double" floating point precision
+        **jitter (float):
+            Float between 1e-4 and 1e-6 for numerical stability
         **mask (ndarray):
             Mask of ones and NaNs (NaNs are values that are not counted when
             searching for acquisition function maximum).
@@ -165,7 +167,8 @@ class boptimizer:
         self.verbose = kwargs.get("verbose", 1)
         self.use_gpu = kwargs.get("use_gpu", False)
         learning_rate = kwargs.get("learning_rate", 5e-2)
-        
+        jitter = kwargs.get("jitter", 1.0e-5)
+
         self.precision = kwargs.get("precision", "double")
 
         if self.use_gpu and torch.cuda.is_available():
@@ -182,8 +185,8 @@ class boptimizer:
         self.surrogate_model = gpr.reconstructor(
             X_seed, y_seed, X_full, kernel, lengthscale, sparse, indpoints,
             learning_rate, gp_iterations, self.use_gpu, self.verbose, seed,
-            precision=self.precision)
-        
+            precision=self.precision, jitter=jitter)
+
         self.X_sparse = X_seed.copy()
         self.y_sparse = y_seed.copy()
         self.X_full = X_full

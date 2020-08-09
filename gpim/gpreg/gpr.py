@@ -68,6 +68,8 @@ class reconstructor:
         **amplitude (float): kernel variance or amplitude squared
         **precision (str):
             Choose between single ('single') and double ('double') precision
+        **jitter (float):
+            Float between 1e-4 and 1e-6 for numerical stability
     """
     def __init__(self,
                  X,
@@ -136,8 +138,10 @@ class reconstructor:
             self.y = self.y.cuda()
             if self.Xtest is not None:
                 self.Xtest = self.Xtest.cuda()
+        jitter = kwargs.get("jitter", 1.0e-5)
         if not self.do_sparse:
-            self.model = gp.models.GPRegression(self.X,  self.y, kernel)
+            self.model = gp.models.GPRegression(
+                self.X,  self.y, kernel, jitter=jitter)
         else:
             if indpoints is None:
                 indpoints = len(self.X) // 10
@@ -148,7 +152,7 @@ class reconstructor:
             if self.verbose == 2:
                 print("# of inducing points for sparse GP regression: {}".format(len(Xu)))
             self.model = gp.models.SparseGPRegression(
-                self.X, self.y, kernel, Xu, jitter=1.0e-5)
+                self.X, self.y, kernel, Xu, jitter=jitter)
         if use_gpu:
             self.model.cuda()
         self.learning_rate = learning_rate
