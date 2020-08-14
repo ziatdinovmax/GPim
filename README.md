@@ -7,8 +7,6 @@
 [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/examples/notebooks/Quickstart_GPim.ipynb)
 [![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/ziatdinovmax/GPim)
 
-**Under active development (expect some breaking changes)**
-
 ## What is GPim
 
 GPim is a python package that provides an easy way to apply Gaussian processes (GP) in [Pyro](https://pyro.ai/) and [Gpytorch](https://gpytorch.ai/) to images and hyperspectral data and to perform GP-based Bayesian optimization on grid data. The intended audience are domain scientists (for example, microscopists) with a basic knowledge of how to work with numpy arrays in Python.
