@@ -212,8 +212,7 @@ class boptimizer:
         self.exit_strategy = kwargs.get("exit_strategy", 0)
         self.mask = kwargs.get("mask", None)
         self.save_checkpoints = kwargs.get("save_checkpoints", False)
-        if self.save_checkpoints:
-            self.filename = kwargs.get("filename", "./boptim_results")
+        self.filename = kwargs.get("filename", "./boptim_results")
         self.indices_all, self.vals_all = [], []
         self.target_func_vals, self.gp_predictions = [y_seed.copy()], []
 
