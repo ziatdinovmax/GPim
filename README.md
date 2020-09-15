@@ -1,13 +1,11 @@
 [![Downloads](https://pepy.tech/badge/gpim/month)](https://pepy.tech/project/gpim/month)
 [![PyPI version](https://badge.fury.io/py/gpim.svg)](https://badge.fury.io/py/gpim)
-[![Build Status](https://travis-ci.com/ziatdinovmax/gpim.svg?branch=master)](https://travis-ci.com/ziatdinovmax/atomai)
+[![Build Status](https://travis-ci.com/ziatdinovmax/gpim.svg?branch=master)](https://travis-ci.com/ziatdinovmax/gpim)
 [![Documentation Status](https://readthedocs.org/projects/gpim/badge/?version=latest)](https://gpim.readthedocs.io/en/latest/?badge=latest)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/07ee1606a88b48d1bc46453f3ae1b1c8)](https://app.codacy.com/manual/ziatdinovmax/GPim?utm_source=github.com&utm_medium=referral&utm_content=ziatdinovmax/GPim&utm_campaign=Badge_Grade_Dashboard)
 
 [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ziatdinovmax/GPim/blob/master/examples/notebooks/Quickstart_GPim.ipynb)
 [![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/ziatdinovmax/GPim)
-
-**Under active development (expect some breaking changes)**
 
 ## What is GPim
 
@@ -15,13 +13,13 @@ GPim is a python package that provides an easy way to apply Gaussian processes (
 <br><br>
 Scientific papers where GPim was used:
 
-- GP for 3D hyperspectral microscopy data: [paper](https://www.nature.com/articles/s41524-020-0289-6)
+- GP for 3D hyperspectral microscopy data: [npj Comput Mater 6, 21 (2020)](https://www.nature.com/articles/s41524-020-0289-6)
 
-- GP for 4D hyperspectral microscopy data: [paper](https://arxiv.org/abs/2002.03591)
+- GP for 4D hyperspectral microscopy data: [Journal of Applied Physics 128, 055101 (2020)](https://aip.scitation.org/doi/10.1063/5.0013847)
 
-- GP and GP-based BO for Ising model: [paper](https://arxiv.org/abs/2004.04832)
+- GP and GP-based BO for Ising model: [arxiv preprint](https://arxiv.org/abs/2004.04832)
 
-- GP-based BO for hysteresis loop engineering in ferroelectrics: [paper](https://arxiv.org/abs/2004.12512)
+- GP-based BO for hysteresis loop engineering in ferroelectrics: [Journal of Applied Physics 128, 024102 (2020)](https://aip.scitation.org/doi/10.1063/5.0011917)
  
 <p align="center">
   <img src="misc/GPim_illustration_v2.png" width="75%" title="GPim">

@@ -108,6 +108,10 @@ class boptimizer:
             there may be no much benefit.
         **precision (str):
             "single" ot "double" floating point precision
+        **jitter (float):
+            Float between 1e-4 and 1e-6 for numerical stability
+        **isotropic (bool):
+            Use single lenghtscale for all dimensions in GP (Default: False)
         **mask (ndarray):
             Mask of ones and NaNs (NaNs are values that are not counted when
             searching for acquisition function maximum).
@@ -169,7 +173,8 @@ class boptimizer:
         self.verbose = kwargs.get("verbose", 1)
         self.use_gpu = kwargs.get("use_gpu", False)
         learning_rate = kwargs.get("learning_rate", 5e-2)
-
+        jitter = kwargs.get("jitter", 1.0e-6)
+        isotropic = kwargs.get("isotropic", False)
         self.precision = kwargs.get("precision", "double")
 
         if self.use_gpu and torch.cuda.is_available():
@@ -186,7 +191,7 @@ class boptimizer:
         self.surrogate_model = gpr.reconstructor(
             X_seed, y_seed, X_full, kernel, lengthscale, sparse, indpoints,
             learning_rate, gp_iterations, self.use_gpu, self.verbose, seed,
-            precision=self.precision)
+            isotropic=isotropic, precision=self.precision, jitter=jitter)
 
         self.X_sparse = X_seed.copy()
         self.y_sparse = y_seed.copy()
@@ -223,6 +228,7 @@ class boptimizer:
         X_sparse_new, y_sparse_new = gprutils.prepare_training_data(
             self.X_sparse, self.y_sparse, precision=self.precision)
         if self.use_gpu and torch.cuda.is_available():
+            torch.cuda.empty_cache()
             X_sparse_new, y_sparse_new = X_sparse_new.cuda(), y_sparse_new.cuda()
         self.surrogate_model.model.X = X_sparse_new
         self.surrogate_model.model.y = y_sparse_new
