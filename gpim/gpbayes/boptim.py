@@ -134,6 +134,10 @@ class boptimizer:
             of previous points. THe remianing points will be selected based
             on kernel lengthscale value without taking into account
             the information about the already visited points.
+        **batch_out_max (int):
+            maximum number of points to output when batch_update=True.
+            Note that the number of output points can be smaller than
+            this value.
         **gamma (float):
             gamma coefficient, value between 0 and 1.
             Used in boptimizer.checkvalues together with a 'dscale' parameter
@@ -219,6 +223,7 @@ class boptimizer:
         self.xi = kwargs.get("xi", 0.01)
         self.dscale = kwargs.get("dscale", None)
         self.batch_dscale = kwargs.get("batch_dscale", None)
+        self.batch_out_max = kwargs.get("batch_out_max", 10)
         self.gamma = kwargs.get("gamma", 0.8)
         self.points_mem = kwargs.get("memory", 10)
         self.exit_strategy = kwargs.get("exit_strategy", 1)
@@ -354,7 +359,8 @@ class boptimizer:
             new_max = acqfunc_values.max()
             new_max_id = np.argmax(acqfunc_values)
             ck = indices[new_max_id]
-        return max_val_all, indices[max_id_all].tolist()
+        return (max_val_all[:self.batch_out_max+1],
+                indices[max_id_all].tolist()[:self.batch_out_max+1])
 
     def checkvalues(self, idx_list, val_list):
         """
