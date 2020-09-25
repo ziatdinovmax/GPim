@@ -115,19 +115,25 @@ class boptimizer:
         **mask (ndarray):
             Mask of ones and NaNs (NaNs are values that are not counted when
             searching for acquisition function maximum).
-        **dscale (float):
-            Distance parameter used in boptimizer.checkvalues or in
-            boptimizer.update_points, For boptimizer.checkvalues,
-            it is used in conjuction with 'gamma' and 'memory'
+        **dscale (int):
+            Distance parameter used in boptimizer.checkvalues.
+            It is used in conjuction with 'gamma' and 'memory'
             parameters to select the next query point using the information
             about the location of previous points. It can be understood as a
             short-term memory, where the point at step :math:`s` is chosen no closer
             than :math:`d` to the point selected at step :math:`s-1`, :math:`\\gamma d`
             to the point selected at step :math:`s-2`, :math:`\\gamma^2 d`
-            at step :math:`s-3`, and so on. Defaults to 0. For boptimizer.update_points,
-            it is used to return a batch of points for a given step, which are no closer
-            to each other than dscale value. Defauts to kernel average lenghtscale
-            at this step.
+            at step :math:`s-3`, and so on. Defaults to 0.
+        **batch_dscale (int):
+            Distance paramater used in boptimizer.update_points. It is used to
+            return a batch of points for a given step, which are no closer
+            to each other than batch_dscale value.
+            Defauts to kernel average lenghtscale at this step. When used
+            in combination with dscale, it will select the *first* queiry
+            point in the batch based on the information about the location
+            of previous points. THe remianing points will be selected based
+            on kernel lengthscale value without taking into account
+            the information about the already visited points.
         **gamma (float):
             gamma coefficient, value between 0 and 1.
             Used in boptimizer.checkvalues together with a 'dscale' parameter
@@ -212,9 +218,10 @@ class boptimizer:
         self.alpha, self.beta = kwargs.get("alpha", 0), kwargs.get("beta", 1)
         self.xi = kwargs.get("xi", 0.01)
         self.dscale = kwargs.get("dscale", None)
+        self.batch_dscale = kwargs.get("batch_dscale", None)
         self.gamma = kwargs.get("gamma", 0.8)
         self.points_mem = kwargs.get("memory", 10)
-        self.exit_strategy = kwargs.get("exit_strategy", 0)
+        self.exit_strategy = kwargs.get("exit_strategy", 1)
         self.mask = kwargs.get("mask", None)
         self.save_checkpoints = kwargs.get("save_checkpoints", False)
         self.filename = kwargs.get("filename", "./boptim_results")
@@ -300,18 +307,15 @@ class boptimizer:
             indices_list = indices_list[:self.batch_size].tolist()
         if not self.batch_update:
             return vals_list, indices_list
-        if self.dscale is None:
-            dscale_ = self.surrogate_model.model.kernel.lengthscale.mean().item()
+        if self.batch_dscale is None:
+            batch_dscale_ = self.surrogate_model.model.kernel.lengthscale.mean().item()
         else:
-            dscale_ = self.dscale
+            batch_dscale_ = self.batch_dscale
         vals_list, indices_list = self.update_points(
-            np.array(vals_list),
-            np.vstack(indices_list),
-            dscale_)
+            vals_list, indices_list, batch_dscale_)
         return vals_list, indices_list
 
-    @classmethod
-    def update_points(cls, acqfunc_values, indices, dscale):
+    def update_points(self, acqfunc_values, indices, dscale):
         """
         Takes arrays of query points (indices and values) corresponding to
         first *n* max values of the acquisition function and returns a batch
@@ -332,6 +336,10 @@ class boptimizer:
         Returns:
             Tuple with computed indices and corresponding values
         """
+        ind, val = self.checkvalues(indices, acqfunc_values)
+        new_start_idx = np.where(np.array(acqfunc_values) == val)[0][0]
+        acqfunc_values = np.array(acqfunc_values)[new_start_idx:]
+        indices = np.vstack(indices)[new_start_idx:]
         minval = acqfunc_values.min()
         new_max = acqfunc_values.max()
         new_max_id = np.argmax(acqfunc_values)
@@ -421,8 +429,12 @@ class boptimizer:
         # update posterior
         self.update_posterior()
         # store indices and values
-        self.indices_all.append(inds)
-        self.vals_all.append(vals)
+        if isinstance(vals, float):
+            self.indices_all.append(inds)
+            self.vals_all.append(vals)
+        else:
+            self.indices_all.extend(inds)
+            self.vals_all.extend(vals)
         return
 
     def run(self):
