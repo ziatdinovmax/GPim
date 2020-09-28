@@ -10,6 +10,7 @@ Author: Maxim Ziatdinov (email: maxim.ziatdinov@ai4microcopy.com)
 """
 
 import types
+import copy
 import torch
 import numpy as np
 from scipy import spatial
@@ -69,6 +70,8 @@ class boptimizer:
             Returns a batch of points when set to True.
             The number of points in the batch may be different from
             batch_size as points are filtered based on the lengthscale.
+            In this case the random indices from the initial batch
+            will be automatically added to the output.
             Defaults to False.
         kernel (str):
             Kernel type ('RBF', 'Matern52', 'RationalQuadratic').
@@ -345,6 +348,7 @@ class boptimizer:
         new_start_idx = np.where(np.array(acqfunc_values) == val)[0][0]
         acqfunc_values = np.array(acqfunc_values)[new_start_idx:]
         indices = np.vstack(indices)[new_start_idx:]
+        acqfunc_values_ = copy.deepcopy(acqfunc_values)
         minval = acqfunc_values.min()
         new_max = acqfunc_values.max()
         new_max_id = np.argmax(acqfunc_values)
@@ -359,8 +363,17 @@ class boptimizer:
             new_max = acqfunc_values.max()
             new_max_id = np.argmax(acqfunc_values)
             ck = indices[new_max_id]
-        return (max_val_all[:self.batch_out_max+1],
-                indices[max_id_all].tolist()[:self.batch_out_max+1])
+        max_val_all = max_val_all[:self.batch_out_max]
+        indices_ = indices[max_id_all].tolist()[:self.batch_out_max]
+        if len(indices_) < self.batch_out_max:
+            if self.verbose == 2:
+                print("Adding {} random indices".format(
+                    self.batch_out_max - len(indices_)))
+            idx_random = np.random.randint(
+                0, len(acqfunc_values), self.batch_out_max - len(indices_))
+            indices_.extend(indices[idx_random].tolist())
+            max_val_all.extend(acqfunc_values_[idx_random].tolist())
+        return max_val_all, indices_
 
     def checkvalues(self, idx_list, val_list):
         """
