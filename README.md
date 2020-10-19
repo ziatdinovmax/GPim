@@ -22,7 +22,7 @@ Scientific papers where GPim was used:
 - GP-based BO for hysteresis loop engineering in ferroelectrics: [Journal of Applied Physics 128, 024102 (2020)](https://aip.scitation.org/doi/10.1063/5.0011917)
  
 <p align="center">
-  <img src="misc/GPim_illustration_v3.jpg" width="75%" title="GPim">
+  <img src="misc/GPim_illustration_v3.jpg" width="95%" title="GPim">
 <p align="justify">
 
 ## Installation
