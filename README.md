@@ -74,7 +74,7 @@ np.random.seed(42)
 # Create a dummy 2D function
 def trial_func(idx):
     """
-    Takes a list of indices as input and returns function value at these indices"""
+    Takes a list of indices as input and returns function value at these indices
     """
     def func(x0, y0, a, b, fwhm): 
         return np.exp(-4*np.log(2) * (a*(idx[0]-x0)**2 + b*(idx[1]-y0)**2) / fwhm**2)
