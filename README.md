@@ -17,7 +17,7 @@ Scientific papers where GPim was used:
 
 - GP for 4D hyperspectral microscopy data: [Journal of Applied Physics 128, 055101 (2020)](https://aip.scitation.org/doi/10.1063/5.0013847)
 
-- GP and GP-based BO for Ising model: [arxiv preprint](https://arxiv.org/abs/2004.04832)
+- GP and GP-based BO for Ising model: [Journal of Applied Physics 128, 164304 (2020)](https://aip.scitation.org/doi/10.1063/5.0021762)
 
 - GP-based BO for hysteresis loop engineering in ferroelectrics: [Journal of Applied Physics 128, 024102 (2020)](https://aip.scitation.org/doi/10.1063/5.0011917)
  
@@ -76,8 +76,15 @@ np.random.seed(42)
 
 # Create a dummy 2D function
 def trial_func(idx):
-    """Takes a list of indices as input and returns function value at these indices"""
-    return np.exp(-4*np.log(2) * ((idx[0]-5)**2 + (idx[1]-10)**2) / 4.5**2) 
+    """
+    Takes a list of indices as input and returns function value at these indices"""
+    """
+    def func(x0, y0, a, b, fwhm): 
+        return np.exp(-4*np.log(2) * (a*(idx[0]-x0)**2 + b*(idx[1]-y0)**2) / fwhm**2)
+    Z1 = func(5, 10, 1, 1, 4.5)
+    Z2 = func(10, 8, 0.75, 1.5, 7)
+    Z3 = func(18, 18, 1, 1.5, 10)
+    return Z1 + Z2 + Z3
 
 # Create an empty observation matrix
 grid_size = 25
