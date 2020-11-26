@@ -1,9 +1,9 @@
 __author__ = "Maxim Ziatdinov"
 __copyright__ = "Copyright Maxim Ziatdinov (2020)"
-__version__ = "0.3.6"
+__version__ = "0.3.7"
 __maintainer__ = "Maxim Ziatdinov"
 __email__ = "maxim.ziatdinov@ai4microcopy.com"
-__date__ = "05/20/2020"
+__date__ = "11/25/2020"
 
 from setuptools import setup, find_packages
 import os
@@ -13,7 +13,7 @@ module_dir = os.path.dirname(os.path.abspath(__file__))
 if __name__ == "__main__":
     setup(
         name='gpim',
-        version='0.3.6',
+        version='0.3.7',
         description='Gaussian processes for image analysis',
         long_description=open(os.path.join(module_dir, 'README.md')).read(),
         long_description_content_type='text/markdown',
