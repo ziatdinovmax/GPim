@@ -182,13 +182,13 @@ class vreconstructor:
             else:
                 self.lscales.append(
                     self.model.covar_module.base_kernel.lengthscale.tolist()[0])
-            self.noise_all.append(
-                self.model.likelihood.noise_covar.noise.tolist())
+            #self.noise_all.append(
+            #    self.model.likelihood.noise_covar.noise.tolist())
             if self.verbose == 2 and (i % 10 == 0 or i == self.iterations - 1):
                 print('iter: {} ...'.format(i),
                       'loss: {} ...'.format(np.around(loss.item(), 4)),
-                      'length: {} ...'.format(np.around(self.lscales[-1], 4)),
-                      'noise: {} ...'.format(np.around(self.noise_all[-1], 7)))
+                      'length: {} ...'.format(np.around(self.lscales[-1], 4)))
+                      #'noise: {} ...'.format(np.around(self.noise_all[-1], 7)))
             if self.verbose and i == 10:
                 print('average time per iteration: {} s'.format(
                     np.round(time.time() - start_time, 2) / 10))
@@ -197,8 +197,8 @@ class vreconstructor:
                 np.round(time.time() - start_time, 2)))
             print('Final parameter values:\n',
                 'lengthscale: {}, noise: {}'.format(
-                    np.around(self.lscales[-1], 4),
-                    np.around(self.noise_all[-1], 7)))
+                    np.around(self.lscales[-1], 4)))
+                    #np.around(self.noise_all[-1], 7)))
         return
 
     def predict(self, Xtest=None, **kwargs):
