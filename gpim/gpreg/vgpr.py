@@ -140,10 +140,9 @@ class vreconstructor:
         self.num_batches = kwargs.get("num_batches", 1)
         self.learning_rate = learning_rate
         self.independent = independent
-        self.lscales, self.noise_all = [], []
+        self.lscales = []
         self.hyperparams = {
-            "lengthscale": self.lscales,
-            "noise": self.noise_all,
+            "lengthscale": self.lscales,  # need to add noise as well
         }
         self.verbose = verbose
 
@@ -182,8 +181,6 @@ class vreconstructor:
             else:
                 self.lscales.append(
                     self.model.covar_module.base_kernel.lengthscale.tolist()[0])
-            #self.noise_all.append(
-            #    self.model.likelihood.noise_covar.noise.tolist())
             if self.verbose == 2 and (i % 10 == 0 or i == self.iterations - 1):
                 print('iter: {} ...'.format(i),
                       'loss: {} ...'.format(np.around(loss.item(), 4)),
@@ -196,9 +193,8 @@ class vreconstructor:
             print('training completed in {} s'.format(
                 np.round(time.time() - start_time, 2)))
             print('Final parameter values:\n',
-                'lengthscale: {}, noise: {}'.format(
+                'lengthscale: {}'.format(
                     np.around(self.lscales[-1], 4)))
-                    #np.around(self.noise_all[-1], 7)))
         return
 
     def predict(self, Xtest=None, **kwargs):
