@@ -18,6 +18,7 @@ Scientific papers that use GPim:
 -   GP for 4D hyperspectral microscopy data: [Journal of Applied Physics 128, 055101 (2020)](https://aip.scitation.org/doi/10.1063/5.0013847)
 -   GP and GP-based BO for Ising model: [Journal of Applied Physics 128, 164304 (2020)](https://aip.scitation.org/doi/10.1063/5.0021762)
 -   GP-based BO for hysteresis loop engineering in ferroelectrics: [Journal of Applied Physics 128, 024102 (2020)](https://aip.scitation.org/doi/10.1063/5.0011917)
+-   GP-based BO for automated experiments in microscopy: [ACS Nano 15, 11253–11262 (2021)](https://doi.org/10.1021/acsnano.0c10239)
  
 <p align="center">
   <img src="misc/GPim_illustration_v3.jpg" width="95%" title="GPim">
