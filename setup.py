@@ -26,9 +26,9 @@ if __name__ == "__main__":
         install_requires=[
             'numpy>=1.16.5',
             'matplotlib>=3.1.1',
-            'torch>=1.3.1',
-            'pyro-ppl>=0.4.1',
-            'gpytorch>=0.3.6',
+            'torch>=1.3.1,<1.9.0',
+            'pyro-ppl>=0.4.1,<1.7.0',
+            'gpytorch>=0.3.6,<1.6.0',
             'scipy>=1.3.0'
         ],
         classifiers=['Programming Language :: Python',
